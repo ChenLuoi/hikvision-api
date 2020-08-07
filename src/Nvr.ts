@@ -1,9 +1,14 @@
-import { sha256 } from './utils/Sha256';
-import {
-  RemoteChanelResult, RemoteLoginResult, RemoteSessionParams, SessionParams
-} from './structure';
-import { XmlHandler } from './utils/XmlHandler';
 import axios, { AxiosInstance } from 'axios';
+import {
+  NvrResponse,
+  RemoteChanelResult, RemoteDeviceInfo, RemoteLoginResult, RemoteSearchDevice, RemoteSearchResult, RemoteSessionParams,
+  RemoteSSHStatus,
+  RemoteTimeStatus,
+  SessionParams
+} from './structure';
+import { formatDate } from './utils/Common';
+import { sha256 } from './utils/Sha256';
+import { XmlHandler } from './utils/XmlHandler';
 
 export interface NvrConfig {
   ip: string
@@ -27,7 +32,7 @@ export class Nvr {
     return `http://${this.ip}:${this.port}`;
   }
 
-  private get header() {
+  private get headers() {
     return this.useProxy
       ? {
         proxy: this.url,
@@ -58,7 +63,7 @@ export class Nvr {
   private async getSessionParams(): Promise<SessionParams> {
     const response = await this.request.get(
       `/ISAPI/Security/sessionLogin/capabilities?username=${this.user}`, {
-        headers: this.header
+        headers: this.headers
       });
     const json = await XmlHandler.parser<RemoteSessionParams>(response.data);
     const cap = json.SessionLoginCap;
@@ -71,15 +76,135 @@ export class Nvr {
     };
   }
 
+  public async deviceInfo(): Promise<RemoteDeviceInfo> {
+    const response = await this.request.get('ISAPI/System/deviceInfo', {
+      headers: this.headers
+    });
+    return await XmlHandler.parser<RemoteDeviceInfo>(response.data);
+  }
+
+  public async updateDeviceInfo(deviceInfo: RemoteDeviceInfo): Promise<void> {
+    const response = await this.request.put('ISAPI/System/deviceInfo',
+      XmlHandler.build(deviceInfo),
+      {
+        headers: this.headers
+      });
+    await XmlHandler.parser<void>(response.data);
+  }
+
+  public async searchDevice(): Promise<RemoteSearchResult> {
+    const response = await this.request.get('/ISAPI/ContentMgmt/InputProxy/search', {
+      headers: this.headers
+    });
+    return await XmlHandler.parser<RemoteSearchResult>(response.data);
+  }
+
+  public async getTime(): Promise<RemoteTimeStatus> {
+    const response = await this.request.get('ISAPI/System/time', {
+      headers: this.headers
+    });
+    return XmlHandler.parser<RemoteTimeStatus>(response.data);
+  }
+
+  public async setTime(ip: string, session: string, date: Date) {
+    const result = await this.request.put(`/ISAPI/System/time`,
+      XmlHandler.build({
+        Time: {
+          timeMode: 'manual',
+          localTime: formatDate(date, 'yyyy-MM-ddThh:mm:ss'),
+          timeZone: 'CST-8:00:00'
+        }
+      }),
+      {
+        headers: this.headers
+      });
+  }
+
+  public async getSSHStatus(): Promise<boolean> {
+    const response = await this.request.get('/ISAPI/System/Network/ssh', {
+      headers: this.headers
+    });
+    const json = await XmlHandler.parser<RemoteSSHStatus>(response.data);
+    return json.SSH.enabled === 'true';
+  }
+
+  public async setSSHStatus(enable: boolean): Promise<boolean> {
+    const response = await this.request.put('/ISAPI/System/Network/ssh',
+      XmlHandler.build({
+        SSH: {
+          enabled: enable.toString()
+        }
+      }),
+      {
+        headers: this.headers
+      });
+    const json = await XmlHandler.parser<NvrResponse>(response.data);
+    return json.ResponseStatus.statusString === 'OK';
+  }
+
+  public async zoom(channelId: number, param: number) {
+    const result = await this.request.put(`/ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/continuous`,
+      XmlHandler.build({
+        PTZData: {
+          zoom: param
+        }
+      }), {
+        headers: this.headers
+      });
+  }
+
+  public async iris(channelId: number, param: number) {
+    const result = await this.request.put(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}/video/iris`,
+      XmlHandler.build({
+        IrisData: {
+          iris: param
+        }
+      }), {
+        headers: this.headers
+      });
+  }
+
+  public async focus(channelId: number, param: number) {
+    const result = await this.request.put(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}/video/focus`,
+      XmlHandler.build({
+        FocusData: {
+          focus: param
+        }
+      }), {
+        headers: this.headers
+      });
+  }
+
+  public async autoPan(channelId: number, param: number) {
+    const result = await this.request.put(`ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/autoPan`,
+      XmlHandler.build({
+        autoPanData: {
+          autoPan: param
+        }
+      }), {
+        headers: this.headers
+      });
+  }
+
+  public async direction(channelId: number, horizontal: number, vertical: number) {
+    const result = await this.request.put(`/ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/continuous`,
+      XmlHandler.build({
+        PTZData: {
+          pan: horizontal,
+          tilt: vertical
+        }
+      }), {
+        headers: this.headers
+      });
+  }
+
   public async connect(): Promise<void> {
     const params = await this.getSessionParams();
     const p = this.encodePassword(params);
     const response = await this.request.post('/ISAPI/Security/sessionLogin',
       `<SessionLogin><userName>${this.user}</userName><password>${p}</password><sessionID>${params.sessionID}</sessionID></SessionLogin>`,
       {
-        headers: {
-          proxy: this.url
-        }
+        headers: this.headers
       });
     const json = await XmlHandler.parser<RemoteLoginResult>(response.data);
     const wrap = json.SessionUserCheck || json.SessionLogin;
@@ -88,7 +213,7 @@ export class Nvr {
 
   public async fetchChannels(): Promise<RemoteChanelResult> {
     const response = await this.request.get('/ISAPI/ContentMgmt/InputProxy/channels', {
-      headers: this.header
+      headers: this.headers
     });
     return XmlHandler.parser<RemoteChanelResult>(response.data);
   }
@@ -112,7 +237,7 @@ export class Nvr {
         }
       }),
       {
-        headers: this.header
+        headers: this.headers
       });
     const json = await XmlHandler.parser<any>(response.data);
   }
@@ -121,16 +246,16 @@ export class Nvr {
   public async deleteChannel(ip: string): Promise<void>;
 
   public async deleteChannel(data: any) {
-    let channelId = data;
+    let channelId: number = data;
     if (typeof data !== 'number') {
       const channels = (await this.fetchChannels()).InputProxyChannelList.InputProxyChannel;
       const channel = channels.find(c => c.sourceInputPortDescriptor.ipAddress === data);
       if (channel) {
-        channelId = channel.id;
+        channelId = Number(channel.id);
       }
     }
     const result = await this.request.delete(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}`, {
-      headers: this.header
+      headers: this.headers
     });
   }
 
