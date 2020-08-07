@@ -1,10 +1,9 @@
 import { Nvr } from './src/Nvr';
-import { RemoteSessionParams, SessionParams, RemoteChanelResult, RemoteLoginResult } from './src/structure';
+import { RemoteSessionParams, RemoteChannelResult, RemoteLoginResult } from './src/structure/remote';
 
 export {
   Nvr,
   RemoteSessionParams,
-  SessionParams,
-  RemoteChanelResult,
+  RemoteChannelResult,
   RemoteLoginResult
 };

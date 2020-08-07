@@ -8,14 +8,6 @@ export interface RemoteSessionParams {
   }
 }
 
-export interface SessionParams {
-  sessionID: string,
-  challenge: string,
-  iterations: number,
-  isIrreversible: boolean,
-  salt: string
-}
-
 export interface RemoteLoginResult {
   SessionUserCheck?: {
     statusValue: string,
@@ -32,24 +24,26 @@ export interface RemoteLoginResult {
   }
 }
 
-export interface RemoteChanelResult {
+export interface RemoteChannel {
+  id: string,
+  name: string,
+  sourceInputPortDescriptor: {
+    proxyProtocol: string,
+    addressingFormatType: string,
+    ipAddress: string,
+    managePortNo: string,
+    srcInputPort: string,
+    userName: string,
+    streamType: string,
+    deviceID: string
+  }
+  enableAnr: string,
+  enableTiming: string
+}
+
+export interface RemoteChannelResult {
   InputProxyChannelList: {
-    InputProxyChannel: {
-      id: string,
-      name: string,
-      sourceInputPortDescriptor: {
-        proxyProtocol: string,
-        addressingFormatType: string,
-        ipAddress: string,
-        managePortNo: string,
-        srcInputPort: string,
-        userName: string,
-        streamType: string,
-        deviceID: string
-      }
-      enableAnr: string,
-      enableTiming: string
-    }[]
+    InputProxyChannel?: RemoteChannel | RemoteChannel[]
   }
 }
 
@@ -112,5 +106,38 @@ export interface RemoteSearchDevice {
 export interface RemoteSearchResult {
   VideoSourceList: {
     VideoSourceDescriptor?: RemoteSearchDevice | RemoteSearchDevice[]
+  }
+}
+
+export interface RemoteUserList {
+  UserList: {
+    User: []
+  }
+}
+
+export interface SecurityVersion {
+  SecurityCap: {
+    supportUserNums: string
+    userBondIpNums: string
+    userBondMacNums: string
+    securityVersion: { '$': any },
+    keyIterateNum: string,
+    isSupportUserCheck: 'true' | 'false'
+    isIrreversible: 'true' | 'false'
+    salt: string
+    isSupportGUIDFileDataExport: 'true' | 'false'
+    isSupportSecurityQuestionConfig: 'true' | 'false'
+    isSupportGetOnlineUserListSC: 'true' | 'false'
+    SecurityLimits: {
+      LoginPasswordLenLimit: any,
+      SecurityAnswerLenLimit: any
+    },
+    RSAKeyLength: { '$': any },
+    isSupportONVIFUserManagement: 'true' | 'false'
+    WebCertificateCap: { CertificateType: any },
+    isSupportConfigFileImport: 'true' | 'false'
+    isSupportConfigFileExport: 'true' | 'false'
+    cfgFileSecretKeyLenLimit: { '$': any },
+    isSupportPictureURlCertificate: 'true' | 'false'
   }
 }

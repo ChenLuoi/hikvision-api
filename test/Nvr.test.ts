@@ -15,21 +15,19 @@ describe('Nvr', () => {
 
   test('deviceInfo', async() => {
     const deviceInfo = await nvr.deviceInfo();
-    expect(deviceInfo.DeviceInfo.deviceType).toBe('DVR');
+    expect(deviceInfo.deviceType).toBe('DVR');
     await nvr.updateDeviceInfo({
-      DeviceInfo: {
-        ...deviceInfo.DeviceInfo,
-        deviceName: 'testName',
-        telecontrolID: '233'
-      }
+      ...deviceInfo,
+      name: 'testName',
+      code: '233'
     });
     const currentDeviceInfo = await nvr.deviceInfo();
-    expect(currentDeviceInfo.DeviceInfo.deviceName).toBe('testName');
-    expect(currentDeviceInfo.DeviceInfo.telecontrolID).toBe('233');
+    expect(currentDeviceInfo.name).toBe('testName');
+    expect(currentDeviceInfo.code).toBe('233');
     await nvr.updateDeviceInfo(deviceInfo);
     const resetDeviceInfo = await nvr.deviceInfo();
-    expect(resetDeviceInfo.DeviceInfo.deviceName).toBe(deviceInfo.DeviceInfo.deviceName);
-    expect(resetDeviceInfo.DeviceInfo.telecontrolID).toBe(deviceInfo.DeviceInfo.telecontrolID);
+    expect(resetDeviceInfo.name).toBe(deviceInfo.name);
+    expect(resetDeviceInfo.code).toBe(deviceInfo.code);
   });
 
   test('ssh', async() => {
@@ -42,7 +40,7 @@ describe('Nvr', () => {
 
   test('fetchChannelsBefore', async() => {
     const channels = await nvr.fetchChannels();
-    channelSize = channels.InputProxyChannelList.InputProxyChannel.length;
+    channelSize = channels.length;
   });
 
   test('addChannel', async() => {
@@ -52,11 +50,11 @@ describe('Nvr', () => {
 
   test('fetchChannels', async() => {
     const channels = await nvr.fetchChannels();
-    expect(channels.InputProxyChannelList.InputProxyChannel.length).toBe(channelSize + 2);
+    expect(channels.length).toBe(channelSize + 2);
   });
 
   test('deleteChannel', async() => {
     await nvr.deleteChannel('10.233.233.234');
-    await nvr.deleteChannel(1);
+    await nvr.deleteChannel('10.233.233.233');
   });
 });

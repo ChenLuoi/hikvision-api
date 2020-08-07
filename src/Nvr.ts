@@ -1,11 +1,12 @@
 import axios, { AxiosInstance } from 'axios';
+import { Channel, DeviceInfo, SessionParams, TimeStatus } from './structure/local';
 import {
   NvrResponse,
-  RemoteChanelResult, RemoteDeviceInfo, RemoteLoginResult, RemoteSearchDevice, RemoteSearchResult, RemoteSessionParams,
+  RemoteChannelResult, RemoteDeviceInfo, RemoteLoginResult, RemoteSearchDevice, RemoteSearchResult, RemoteSessionParams,
   RemoteSSHStatus,
-  RemoteTimeStatus,
-  SessionParams
-} from './structure';
+  RemoteTimeStatus, SecurityVersion
+} from './structure/remote';
+import { LTR, RTL } from './structure/transform';
 import { formatDate } from './utils/Common';
 import { sha256 } from './utils/Sha256';
 import { XmlHandler } from './utils/XmlHandler';
@@ -66,26 +67,20 @@ export class Nvr {
         headers: this.headers
       });
     const json = await XmlHandler.parser<RemoteSessionParams>(response.data);
-    const cap = json.SessionLoginCap;
-    return {
-      sessionID: cap.sessionID,
-      challenge: cap.challenge,
-      iterations: Number(cap.iterations),
-      isIrreversible: cap.isIrreversible === 'true',
-      salt: cap.salt || ''
-    };
+    return RTL.sessionParams(json);
   }
 
-  public async deviceInfo(): Promise<RemoteDeviceInfo> {
+  public async deviceInfo(): Promise<DeviceInfo> {
     const response = await this.request.get('ISAPI/System/deviceInfo', {
       headers: this.headers
     });
-    return await XmlHandler.parser<RemoteDeviceInfo>(response.data);
+    const info = await XmlHandler.parser<RemoteDeviceInfo>(response.data);
+    return RTL.deviceInfo(info);
   }
 
-  public async updateDeviceInfo(deviceInfo: RemoteDeviceInfo): Promise<void> {
+  public async updateDeviceInfo(deviceInfo: DeviceInfo): Promise<void> {
     const response = await this.request.put('ISAPI/System/deviceInfo',
-      XmlHandler.build(deviceInfo),
+      XmlHandler.build(LTR.deviceInfo(deviceInfo)),
       {
         headers: this.headers
       });
@@ -99,19 +94,25 @@ export class Nvr {
     return await XmlHandler.parser<RemoteSearchResult>(response.data);
   }
 
-  public async getTime(): Promise<RemoteTimeStatus> {
+  public async getTime(): Promise<TimeStatus> {
     const response = await this.request.get('ISAPI/System/time', {
       headers: this.headers
     });
-    return XmlHandler.parser<RemoteTimeStatus>(response.data);
+    const json = await XmlHandler.parser<RemoteTimeStatus>(response.data);
+    return RTL.timeStatus(json);
   }
 
-  public async setTime(ip: string, session: string, date: Date) {
+  public async setTime(timeStatus: TimeStatus) {
+    /*
+     <timeMode>manual</timeMode>
+     <localTime>2020-08-03T18:04:24+08:00</localTime>
+     <timeZone>CST-8:00:00</timeZone>
+     */
     const result = await this.request.put(`/ISAPI/System/time`,
       XmlHandler.build({
         Time: {
           timeMode: 'manual',
-          localTime: formatDate(date, 'yyyy-MM-ddThh:mm:ss'),
+          localTime: formatDate(timeStatus.time, 'yyyy-MM-ddThh:mm:ss'),
           timeZone: 'CST-8:00:00'
         }
       }),
@@ -199,10 +200,10 @@ export class Nvr {
   }
 
   public async connect(): Promise<void> {
-    const params = await this.getSessionParams();
+    const params: SessionParams = await this.getSessionParams();
     const p = this.encodePassword(params);
     const response = await this.request.post('/ISAPI/Security/sessionLogin',
-      `<SessionLogin><userName>${this.user}</userName><password>${p}</password><sessionID>${params.sessionID}</sessionID></SessionLogin>`,
+      `<SessionLogin><userName>${this.user}</userName><password>${p}</password><sessionID>${params.sessionId}</sessionID></SessionLogin>`,
       {
         headers: this.headers
       });
@@ -211,11 +212,12 @@ export class Nvr {
     this.session = wrap ? wrap.sessionID : '';
   }
 
-  public async fetchChannels(): Promise<RemoteChanelResult> {
+  public async fetchChannels(): Promise<Channel[]> {
     const response = await this.request.get('/ISAPI/ContentMgmt/InputProxy/channels', {
       headers: this.headers
     });
-    return XmlHandler.parser<RemoteChanelResult>(response.data);
+    const channels = await XmlHandler.parser<RemoteChannelResult>(response.data);
+    return RTL.fetchChannels(channels);
   }
 
   public async addChannel(data: { ip: string, userName: string, password: string, port?: number, protocol: string }) {
@@ -243,20 +245,37 @@ export class Nvr {
   }
 
   public async deleteChannel(channelId: number): Promise<void>;
-  public async deleteChannel(ip: string): Promise<void>;
+  public async deleteChannel(address: string): Promise<void>;
 
   public async deleteChannel(data: any) {
     let channelId: number = data;
     if (typeof data !== 'number') {
-      const channels = (await this.fetchChannels()).InputProxyChannelList.InputProxyChannel;
-      const channel = channels.find(c => c.sourceInputPortDescriptor.ipAddress === data);
+      const channels = await this.fetchChannels();
+      const channel = channels.find(c => c.address === data);
       if (channel) {
         channelId = Number(channel.id);
       }
     }
-    const result = await this.request.delete(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}`, {
+    const result = await this.request.delete<NvrResponse>(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}`, {
       headers: this.headers
     });
+  }
+
+  public async getUsers() {
+    const response = await this.request.get('/ISAPI/Security/users', {
+      headers: this.headers
+    });
+    const users = await XmlHandler.parser(response.data);
+  }
+
+  public async getSecurityVersion(userName?: string) {
+    const response = await this.request.get('/ISAPI/Security/capabilities', {
+      headers: this.headers,
+      params: {
+        username: userName || this.user
+      }
+    });
+    return await XmlHandler.parser<SecurityVersion>(response.data);
   }
 
   private encodePassword(session: SessionParams): string {
