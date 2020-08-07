@@ -3,7 +3,8 @@ _global.nvrConfig = {
   ip: '1.1.1.1',
   // port: 80
   user: 'admin',
-  password: '123456'
+  password: '123456',
   // timeout: 10000,
   // proxy : 'http://127.0.0.1/'
+  version: 2
 };

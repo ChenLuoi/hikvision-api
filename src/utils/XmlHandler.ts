@@ -5,6 +5,7 @@ export class XmlHandler {
     explicitArray: false
   });
   private static _builder = new xml2js.Builder({
+    headless: true,
     renderOpts: {
       pretty: false
     }

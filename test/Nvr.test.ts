@@ -1,5 +1,13 @@
 import { Nvr } from '../src/Nvr';
 
+function sleep(millisecond: number) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, millisecond);
+  });
+}
+
 describe('Nvr', () => {
   const _global: any = typeof window === 'undefined' ? global : window;
   const nvr = new Nvr(_global.nvrConfig);
@@ -10,12 +18,13 @@ describe('Nvr', () => {
   });
 
   test('connect', () => {
-    expect(nvr.getSession().length).not.toBe(0);
+    if (nvr.version === 1) {
+      expect(nvr.getSession().length).not.toBe(0);
+    }
   });
 
   test('deviceInfo', async() => {
     const deviceInfo = await nvr.deviceInfo();
-    expect(deviceInfo.deviceType).toBe('DVR');
     await nvr.updateDeviceInfo({
       ...deviceInfo,
       name: 'testName',
@@ -56,5 +65,38 @@ describe('Nvr', () => {
   test('deleteChannel', async() => {
     await nvr.deleteChannel('10.233.233.234');
     await nvr.deleteChannel('10.233.233.233');
+  });
+
+  test('direction', async() => {
+    await nvr.direction(1, 60, 0);
+    await sleep(2000);
+    await nvr.direction(1, 0, 0);
+    await nvr.direction(1, -60, 0);
+    await sleep(2000);
+    await nvr.direction(1, 0, 0);
+    await nvr.direction(1, 0, 60);
+    await sleep(2000);
+    await nvr.direction(1, 0, 0);
+    await nvr.direction(1, 0, -60);
+    await sleep(2000);
+    await nvr.direction(1, 0, 0);
+  }, 15000);
+
+  test('zoom', async() => {
+    await nvr.zoom(1, 60);
+    await sleep(2000);
+    await nvr.zoom(1, 0);
+    await nvr.zoom(1, -60);
+    await sleep(2000);
+    await nvr.zoom(1, 0);
+  }, 8000);
+
+  test('focus', async() => {
+    await nvr.focus(1, 60);
+    await sleep(1000);
+    await nvr.focus(1, 0);
+    await nvr.focus(1, -60);
+    await sleep(1000);
+    await nvr.focus(1, 0);
   });
 });

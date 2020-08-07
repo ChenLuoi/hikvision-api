@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { Channel, DeviceInfo, SessionParams, TimeStatus } from './structure/local';
 import {
   NvrResponse,
-  RemoteChannelResult, RemoteDeviceInfo, RemoteLoginResult, RemoteSearchDevice, RemoteSearchResult, RemoteSessionParams,
+  RemoteChannelResult, RemoteDeviceInfo, RemoteLoginResult, RemoteSearchResult, RemoteSessionParams,
   RemoteSSHStatus,
   RemoteTimeStatus, SecurityVersion
 } from './structure/remote';
@@ -18,16 +18,20 @@ export interface NvrConfig {
   password: string
   timeout?: number
   proxy?: string
+  wsPort?: number
+  version?: number
 }
 
 export class Nvr {
-  private readonly ip: string;
+  private readonly ip: string = '192.168.1.64';
   private readonly port: number = 80;
-  private readonly user: string;
+  private readonly user: string = 'admin';
   private readonly password: string;
   private session: string = '';
   private request: AxiosInstance;
   private readonly useProxy: boolean = false;
+  private readonly wsPort: number = 7681;
+  public readonly version: number = 1;
 
   private get url(): string {
     return `http://${this.ip}:${this.port}`;
@@ -40,7 +44,7 @@ export class Nvr {
         session: this.session
       }
       : {
-        Cookie: `WebSession=${this.session}`
+        Cookie: this.version === 2 ? this.session : `WebSession=${this.session}`
       };
   }
 
@@ -50,10 +54,26 @@ export class Nvr {
     this.user = config.user;
     this.password = config.password;
     this.useProxy = !!config.proxy;
+    this.wsPort = config.wsPort || 7681;
+    if (config.version) {
+      this.version = config.version;
+    }
 
     this.request = axios.create({
       baseURL: config.proxy || this.url,
       timeout: config.timeout || 10000
+    });
+  }
+
+  public get websocketUrl(): string {
+    return `ws://${this.ip}:${this.wsPort}/?version=1.0&cipherSuites=1&sessionID=${this.session}`;
+  }
+
+  public getPlayCommand(channelId: number): string {
+    return JSON.stringify({
+      sequence: 0,
+      cmd: 'realplay',
+      live: `live://${this.ip}:${this.wsPort}/${32 + channelId}/1`
     });
   }
 
@@ -202,14 +222,26 @@ export class Nvr {
   public async connect(): Promise<void> {
     const params: SessionParams = await this.getSessionParams();
     const p = this.encodePassword(params);
-    const response = await this.request.post('/ISAPI/Security/sessionLogin',
-      `<SessionLogin><userName>${this.user}</userName><password>${p}</password><sessionID>${params.sessionId}</sessionID></SessionLogin>`,
+    const response = await this.request.post(`/ISAPI/Security/sessionLogin?timeStamp=${Date.now()}`,
+      XmlHandler.build({
+        SessionLogin: {
+          userName: this.user,
+          password: p,
+          sessionID: params.sessionId,
+          isSessionIDValidLongTerm: false,
+          sessionIDVersion: 2
+        }
+      }),
       {
         headers: this.headers
       });
-    const json = await XmlHandler.parser<RemoteLoginResult>(response.data);
-    const wrap = json.SessionUserCheck || json.SessionLogin;
-    this.session = wrap ? wrap.sessionID : '';
+    if (this.version === 1) {
+      const json = await XmlHandler.parser<RemoteLoginResult>(response.data);
+      const wrap = json.SessionUserCheck || json.SessionLogin;
+      this.session = wrap ? wrap.sessionID : '';
+    } else {
+      this.session = response.headers['set-cookie'][0] || '';
+    }
   }
 
   public async fetchChannels(): Promise<Channel[]> {
