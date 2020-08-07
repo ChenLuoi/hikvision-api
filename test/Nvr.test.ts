@@ -67,6 +67,46 @@ describe('Nvr', () => {
     await nvr.deleteChannel('10.233.233.233');
   });
 
+  test('fetchUsers', async() => {
+    const users = await nvr.fetchUsers();
+    const admin = users.find(u => u.userName === 'admin');
+    expect(admin).not.toBeUndefined();
+    expect(admin!.type).toBe('Administrator');
+  });
+
+  test('addUser', async() => {
+    await nvr.addUser({
+      id: '0',
+      userName: 'testUser0',
+      type: 'Operator',
+      password: 'a12345678'
+    });
+    const users = await nvr.fetchUsers();
+    const user0 = users.find(u => u.userName === 'testUser0');
+    expect(user0).not.toBeUndefined();
+    expect(user0!.type).toBe('Operator');
+  });
+
+  test('updateUser', async() => {
+    const users = await nvr.fetchUsers();
+    const user0 = users.find(u => u.userName === 'testUser0');
+    expect(user0).not.toBeUndefined();
+    user0!.type = 'Viewer';
+    user0!.password = 'a87654321';
+    await nvr.updateUser(user0!);
+    const _users = await nvr.fetchUsers();
+    const _user0 = _users.find(u => u.userName === 'testUser0');
+    expect(_user0).not.toBeUndefined();
+    expect(_user0!.type).toBe('Viewer');
+  });
+
+  test('deleteUses', async() => {
+    const users = await nvr.fetchUsers();
+    const user0 = users.find(u => u.userName === 'testUser0');
+    expect(user0).not.toBeUndefined();
+    await nvr.deleteUser(user0!.id);
+  });
+
   test('direction', async() => {
     await nvr.direction(1, 60, 0);
     await sleep(2000);

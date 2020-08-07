@@ -40,3 +40,10 @@ export interface TimeStatus {
   time: Date
   timeZoneOffset: number
 }
+
+export interface User {
+  id: string
+  userName: string
+  type: 'Administrator' | 'Operator' | 'Viewer'
+  password?: string
+}

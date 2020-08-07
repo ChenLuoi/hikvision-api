@@ -1,5 +1,8 @@
-import { Channel, DeviceInfo, SessionParams, TimeStatus } from './local';
-import { RemoteChannel, RemoteChannelResult, RemoteDeviceInfo, RemoteSessionParams, RemoteTimeStatus } from './remote';
+import { Channel, DeviceInfo, SessionParams, TimeStatus, User } from './local';
+import {
+  RemoteChannel, RemoteChannelResult, RemoteDeviceInfo, RemoteSessionParams, RemoteTimeStatus, RemoteUser,
+  RemoteUserList
+} from './remote';
 
 export class RTL {
   public static sessionParams(params: RemoteSessionParams): SessionParams {
@@ -56,6 +59,29 @@ export class RTL {
         });
       } else {
         return [this.channel(channels)];
+      }
+    } else {
+      return [];
+    }
+  }
+
+  private static user(user: RemoteUser): User {
+    return {
+      id: user.id,
+      userName: user.userName,
+      type: user.userLevel
+    };
+  }
+
+  public static fetchUsers(_users: RemoteUserList): User[] {
+    const users = _users.UserList.User;
+    if (users) {
+      if (Array.isArray(users)) {
+        return users.map(remote => {
+          return this.user(remote);
+        });
+      } else {
+        return [this.user(users)];
       }
     } else {
       return [];

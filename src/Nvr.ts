@@ -1,10 +1,10 @@
 import axios, { AxiosInstance } from 'axios';
-import { Channel, DeviceInfo, SessionParams, TimeStatus } from './structure/local';
+import { Channel, DeviceInfo, SessionParams, TimeStatus, User } from './structure/local';
 import {
   NvrResponse,
   RemoteChannelResult, RemoteDeviceInfo, RemoteLoginResult, RemoteSearchResult, RemoteSessionParams,
   RemoteSSHStatus,
-  RemoteTimeStatus, SecurityVersion
+  RemoteTimeStatus, RemoteUserList, SecurityVersion
 } from './structure/remote';
 import { LTR, RTL } from './structure/transform';
 import { formatDate } from './utils/Common';
@@ -20,6 +20,7 @@ export interface NvrConfig {
   proxy?: string
   wsPort?: number
   version?: number
+  userPassword?: string
 }
 
 export class Nvr {
@@ -32,6 +33,7 @@ export class Nvr {
   private readonly useProxy: boolean = false;
   private readonly wsPort: number = 7681;
   public readonly version: number = 1;
+  private readonly userPassword: string = '';
 
   private get url(): string {
     return `http://${this.ip}:${this.port}`;
@@ -55,9 +57,8 @@ export class Nvr {
     this.password = config.password;
     this.useProxy = !!config.proxy;
     this.wsPort = config.wsPort || 7681;
-    if (config.version) {
-      this.version = config.version;
-    }
+    config.version && (this.version = config.version);
+    config.userPassword && (this.userPassword = config.userPassword);
 
     this.request = axios.create({
       baseURL: config.proxy || this.url,
@@ -65,8 +66,13 @@ export class Nvr {
     });
   }
 
-  public get websocketUrl(): string {
-    return `ws://${this.ip}:${this.wsPort}/?version=1.0&cipherSuites=1&sessionID=${this.session}`;
+  public async getWebsocketUrl(): Promise<string> {
+    if (this.version === 2) {
+      const token = await this.getWebsocketToken();
+      return `ws://${this.ip}:${this.wsPort}/?version=1.0&cipherSuites=1&token=${token}`;
+    } else {
+      return `ws://${this.ip}:${this.wsPort}/?version=1.0&cipherSuites=1&sessionID=${this.session}`;
+    }
   }
 
   public getPlayCommand(channelId: number): string {
@@ -81,6 +87,13 @@ export class Nvr {
     return this.session;
   }
 
+  private async getWebsocketToken(): Promise<string> {
+    const response = await this.request.get('/ISAPI/Security/token?format=json', {
+      headers: this.headers
+    });
+    return response.data.Token.value;
+  }
+
   private async getSessionParams(): Promise<SessionParams> {
     const response = await this.request.get(
       `/ISAPI/Security/sessionLogin/capabilities?username=${this.user}`, {
@@ -91,7 +104,7 @@ export class Nvr {
   }
 
   public async deviceInfo(): Promise<DeviceInfo> {
-    const response = await this.request.get('ISAPI/System/deviceInfo', {
+    const response = await this.request.get('/ISAPI/System/deviceInfo', {
       headers: this.headers
     });
     const info = await XmlHandler.parser<RemoteDeviceInfo>(response.data);
@@ -242,6 +255,96 @@ export class Nvr {
     } else {
       this.session = response.headers['set-cookie'][0] || '';
     }
+  }
+
+  public async addUser(user: User): Promise<void> {
+    let result;
+    try {
+      const response = await this.request.post('/ISAPI/Security/users',
+        XmlHandler.build({
+          User: {
+            id: user.id,
+            userName: user.userName,
+            loginPassword: this.password,
+            password: user.password || this.userPassword,
+            userLevel: 'Operator'
+          }
+        }),
+        {
+          headers: this.headers
+        });
+      result = response.data;
+    } catch (e) {
+      result = e.response.data;
+    }
+    const r = await XmlHandler.parser<NvrResponse>(result);
+    if (r.ResponseStatus.statusCode !== '1') {
+      throw new Error(r.ResponseStatus.subStatusCode);
+    }
+  }
+
+  public async updateUser(user: User): Promise<void> {
+    let result;
+    try {
+      const response = await this.request.put(`/ISAPI/Security/users/${user.id}`,
+        XmlHandler.build({
+          User: {
+            id: user.id,
+            userName: user.userName,
+            loginPassword: this.password,
+            password: user.password || this.userPassword,
+            userLevel: user.type
+          }
+        }),
+        {
+          headers: this.headers
+        });
+      result = response.data;
+    } catch (e) {
+      result = e.response.data;
+    }
+    const r = await XmlHandler.parser<NvrResponse>(result);
+    if (r.ResponseStatus.statusCode !== '1') {
+      throw new Error(r.ResponseStatus.subStatusCode);
+    }
+  }
+
+  public async deleteUser(userId: number): Promise<void>;
+  public async deleteUser(userName: string): Promise<void>;
+
+  public async deleteUser(data: any) {
+    let userId: number = data;
+    if (typeof data !== 'number') {
+      const users = await this.fetchUsers();
+      const user = users.find(u => u.userName === data);
+      if (user) {
+        userId = Number(user.id);
+      }
+    }
+    let result;
+    try {
+      const response = await this.request.delete<NvrResponse>(`/ISAPI/Security/users/${userId}`, {
+        headers: this.headers,
+        params: {
+          loginPassword: this.password
+        }
+      });
+      result = response.data;
+    } catch (e) {
+      result = e.response.data;
+    }
+    const r = await XmlHandler.parser<NvrResponse>(result);
+    if (r.ResponseStatus.statusCode !== '1') {
+      throw new Error(r.ResponseStatus.subStatusCode);
+    }
+  }
+
+  public async fetchUsers(): Promise<User[]> {
+    const response = await this.request.get('/ISAPI/Security/users', {
+      headers: this.headers
+    });
+    const users = await XmlHandler.parser<RemoteUserList>(response.data);
+    return RTL.fetchUsers(users);
   }
 
   public async fetchChannels(): Promise<Channel[]> {

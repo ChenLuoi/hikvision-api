@@ -109,9 +109,31 @@ export interface RemoteSearchResult {
   }
 }
 
+export interface RemoteUser {
+  id: string
+  userName: string
+  userLevel: 'Administrator' | 'Operator' | 'Viewer'
+  bondIpAddressList: {
+    bondIpAddress: {
+      id: string
+      ipAddress: string
+      ipv6Address: string
+    }
+  },
+  bondMacAddressList: {
+    bondMacAddress: {
+      id: string
+      macAddress: string
+    }
+  },
+  attribute: {
+    inherent: 'true' | 'false'
+  }
+}
+
 export interface RemoteUserList {
   UserList: {
-    User: []
+    User: RemoteUser | RemoteUser[]
   }
 }
 
