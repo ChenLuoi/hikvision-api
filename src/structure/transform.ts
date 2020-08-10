@@ -1,6 +1,8 @@
-import { Channel, DeviceInfo, SessionParams, TimeStatus, User } from './local';
+import { Channel, DeviceInfo, Hdd, Nas, SessionParams, Storages, TimeStatus, User } from './local';
 import {
-  RemoteChannel, RemoteChannelResult, RemoteDeviceInfo, RemoteSessionParams, RemoteTimeStatus, RemoteUser,
+  RemoteChannel, RemoteChannelResult, RemoteDeviceInfo, RemoteHdd, RemoteNas, RemoteSessionParams, RemoteStorageList,
+  RemoteTimeStatus,
+  RemoteUser,
   RemoteUserList
 } from './remote';
 
@@ -93,6 +95,64 @@ export class RTL {
       mode: timeStatus.Time.timeMode,
       time: new Date(timeStatus.Time.localTime),
       timeZoneOffset: -480
+    };
+  }
+
+  private static hdd(hdd: RemoteHdd): Hdd {
+    return {
+      id: hdd.id,
+      name: hdd.hddName,
+      path: hdd.hddPath,
+      type: hdd.hddType,
+      status: hdd.status,
+      capacity: parseInt(hdd.capacity),
+      freeSpace: parseInt(hdd.freeSpace),
+      property: hdd.property
+    };
+  }
+
+  private static nas(nas: RemoteNas): Nas {
+    return {
+      id: nas.id,
+      addressingFormatType: nas.addressingFormatType,
+      ipAddress: nas.ipAddress,
+      port: Number(nas.portNo),
+      type: nas.nasType,
+      path: nas.path,
+      status: nas.status,
+      capacity: parseInt(nas.capacity),
+      freeSpace: parseInt(nas.freeSpace),
+      property: nas.property
+    };
+  }
+
+  public static getStorages(storages: RemoteStorageList): Storages {
+    const hdd = [];
+    const nas = [];
+    const hddList = storages.storage.hddList.hdd;
+    const nasList = storages.storage.nasList.nas;
+    if (hddList) {
+      if (Array.isArray(hddList)) {
+        hdd.push(...hddList.map(remote => {
+          return this.hdd(remote);
+        }));
+      } else {
+        hdd.push(this.hdd(hddList));
+      }
+    }
+    if (nasList) {
+      if (Array.isArray(nasList)) {
+        nas.push(...nasList.map(remote => {
+          return this.nas(remote);
+        }));
+      } else {
+        nas.push(this.nas(nasList));
+      }
+    }
+    return {
+      hdd,
+      nas,
+      mode: storages.storage.workMode
     };
   }
 }

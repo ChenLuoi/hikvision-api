@@ -1,12 +1,5 @@
-import { Nvr } from '../src/Nvr';
-
-function sleep(millisecond: number) {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      resolve();
-    }, millisecond);
-  });
-}
+import { Nvr } from '../../src/equipment/Nvr';
+import { sleep } from '../../src/utils/Common';
 
 describe('Nvr', () => {
   const _global: any = typeof window === 'undefined' ? global : window;
@@ -122,6 +115,16 @@ describe('Nvr', () => {
     await nvr.direction(1, 0, 0);
   }, 15000);
 
+
+  test('focus', async() => {
+    await nvr.focus(1, 60);
+    await sleep(500);
+    await nvr.focus(1, 0);
+    await nvr.focus(1, -60);
+    await sleep(500);
+    await nvr.focus(1, 0);
+  });
+
   test('zoom', async() => {
     await nvr.zoom(1, 60);
     await sleep(2000);
@@ -130,13 +133,4 @@ describe('Nvr', () => {
     await sleep(2000);
     await nvr.zoom(1, 0);
   }, 8000);
-
-  test('focus', async() => {
-    await nvr.focus(1, 60);
-    await sleep(1000);
-    await nvr.focus(1, 0);
-    await nvr.focus(1, -60);
-    await sleep(1000);
-    await nvr.focus(1, 0);
-  });
 });

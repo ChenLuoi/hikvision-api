@@ -47,3 +47,33 @@ export interface User {
   type: 'Administrator' | 'Operator' | 'Viewer'
   password?: string
 }
+
+export interface Hdd {
+  id: string
+  name: string
+  path: string
+  type: string
+  status: string
+  capacity: number
+  freeSpace: number
+  property: string
+}
+
+export interface Nas {
+  id: string
+  addressingFormatType: string
+  ipAddress: string
+  port: number
+  type: string
+  path: string
+  status: string
+  capacity: number
+  freeSpace: number
+  property: string
+}
+
+export interface Storages {
+  hdd: Hdd[]
+  nas: Nas[]
+  mode: string
+}

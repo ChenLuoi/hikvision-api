@@ -19,3 +19,12 @@ export function formatDate(date: Date, fmt: string = 'yyyy-MM-dd hh:mm:ss'): str
   }
   return fmt;
 }
+
+
+export function sleep(millisecond: number) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, millisecond);
+  });
+}

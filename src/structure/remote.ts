@@ -163,3 +163,46 @@ export interface SecurityVersion {
     isSupportPictureURlCertificate: 'true' | 'false'
   }
 }
+
+export interface RemoteHdd {
+  id: string
+  hddName: string
+  hddPath: string
+  hddType: string
+  status: string
+  capacity: string
+  freeSpace: string
+  property: string
+}
+
+export interface RemoteNas {
+  id: string
+  addressingFormatType: string
+  ipAddress: string
+  portNo: string
+  nasType: string
+  path: string
+  status: string
+  capacity: string
+  freeSpace: string
+  property: string
+}
+
+export interface RemoteStorageList {
+  storage: {
+    hddList: {
+      hdd?: RemoteHdd | RemoteHdd[],
+    }
+    nasList: {
+      nas?: RemoteNas | RemoteNas[]
+    }
+    workMode: string
+  }
+}
+
+export interface RemoteFormatStatus {
+  formatStatus: {
+    formating: 'true' | 'false'
+    percent: string // number
+  }
+}
