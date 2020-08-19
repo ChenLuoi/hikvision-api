@@ -1,9 +1,7 @@
-import { Nvr } from './src/Nvr';
-import { RemoteSessionParams, RemoteChannelResult, RemoteLoginResult } from './src/structure/remote';
+import { Nvr } from './src/equipment/Nvr';
+import { Camera } from './src/equipment/Camera';
 
-export {
+export default {
   Nvr,
-  RemoteSessionParams,
-  RemoteChannelResult,
-  RemoteLoginResult
+  Camera
 };

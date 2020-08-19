@@ -169,7 +169,7 @@ export interface RemoteHdd {
   hddName: string
   hddPath: string
   hddType: string
-  status: string
+  status: 'ok' | 'error'
   capacity: string
   freeSpace: string
   property: string

@@ -2,7 +2,7 @@
   "name": "hikvision-api",
   "version": "1.0.0",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "typings": "index.d.ts",
   "description": "a simple toolkit to connect and control some equipments of hikvision",
   "license": "MIT",
   "scripts": {
