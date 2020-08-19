@@ -162,7 +162,10 @@ export class Nvr extends Base {
       const wrap = json.SessionUserCheck || json.SessionLogin;
       this.session = wrap ? wrap.sessionID : '';
     } else {
-      this.session = response.headers['set-cookie'][0] || '';
+      const cookie = response.headers['set-cookie'];
+      if (cookie && cookie.length > 0) {
+        this.session = response.headers['set-cookie'][0] || '';
+      }
     }
   }
 
