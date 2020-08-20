@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
     "target": "es5",
+    "outFile": "./dist/index.js",
     "module": "commonjs",
-    "outDir": "./dist",
+    "removeComments": true,
     "strict": true,
     "esModuleInterop": true,
     "declaration": false,

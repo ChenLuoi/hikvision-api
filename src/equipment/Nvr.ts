@@ -1,10 +1,14 @@
-import { Channel, Storages } from '../structure/local';
+import { AxiosResponse } from 'axios';
+import { Channel, RecordStatus, Storages } from '../structure/local';
 import {
-  NvrResponse, RemoteChannelResult, RemoteFormatStatus, RemoteLoginResult, RemoteSearchResult, RemoteSSHStatus,
+  NvrResponse, RemoteChannelResult, RemoteDailyRecordStatus, RemoteFormatStatus, RemoteLoginResult,
+  RemoteRecordSearchResult, RemoteSearchResult,
+  RemoteSSHStatus,
   RemoteStorageList,
   SecurityVersion
 } from '../structure/remote';
 import { RTL } from '../structure/transform';
+import { formatDate, generateUUID } from '../utils/Common';
 import { XmlHandler } from '../utils/XmlHandler';
 import { Base, BaseConfig } from './Base';
 
@@ -238,11 +242,11 @@ export class Nvr extends Base {
 
   public async formatHdd(id: string, progressListener?: (progress: number) => void) {
     return new Promise((resolve, reject) => {
-      const request = this.request.put(`/ISAPI/ContentMgmt/Storage/hdd/${id}/format`, null, {
+      const request = this.request.put<string>(`/ISAPI/ContentMgmt/Storage/hdd/${id}/format`, null, {
         timeout: 60000,
         headers: this.headers
       });
-      const watcher = async() => {
+      const watcher = async () => {
         if (progressListener) {
           const progress = await this.formatHddStatus(id);
           if (progress > -1) {
@@ -277,5 +281,49 @@ export class Nvr extends Base {
     const storages = await XmlHandler.parser<RemoteFormatStatus>(response.data);
     const progress = parseInt(storages.formatStatus.percent);
     return Number.isNaN(progress) ? -1 : progress;
+  }
+
+  public async getDailyRecordStatus(channelId: number, streamType: number, date?: Date): Promise<RecordStatus[]> {
+    const _date = date || new Date();
+    const response = await this.request.post(
+      `/ISAPI/ContentMgmt/record/tracks/${channelId * 100 + streamType}/dailyDistribution`,
+      XmlHandler.build({
+        trackDailyParam: {
+          year: _date.getFullYear(),
+          monthOfYear: _date.getMonth() + 1
+        }
+      }), {
+        headers: this.headers
+      });
+    const status = await XmlHandler.parser<RemoteDailyRecordStatus>(response.data);
+    return RTL.getDailyRecordStatus(_date, status);
+  }
+
+
+  public async searchRecords(channelId: number, streamType: number, startTime: Date, endTime: Date, pageNo: number, pageSize: number) {
+    const response = await this.request.post('/ISAPI/ContentMgmt/search',
+      XmlHandler.build({
+        CMSearchDescription: {
+          searchID: generateUUID(),
+          trackList: {
+            trackID: 100 * channelId + streamType
+          },
+          timeSpanList: {
+            timeSpan: {
+              startTime: formatDate(startTime, 'yyyy-MM-ddThh:mm:ssZ'),
+              endTime: formatDate(endTime, 'yyyy-MM-ddThh:mm:ssZ')
+            }
+          },
+          maxResults: pageSize,
+          searchResultPostion: (pageNo - 1) * pageSize,
+          metadataList: {
+            metadataDescriptor: 'recordType.meta.std-cgi.com'
+          }
+        }
+      }), {
+        headers: this.headers
+      });
+    const result = await XmlHandler.parser<RemoteRecordSearchResult>(response.data);
+    return RTL.searchRecords(result);
   }
 }

@@ -1,6 +1,10 @@
-import { Channel, DeviceInfo, Hdd, Nas, SessionParams, Storages, TimeStatus, User } from './local';
 import {
-  RemoteChannel, RemoteChannelResult, RemoteDeviceInfo, RemoteHdd, RemoteNas, RemoteSessionParams, RemoteStorageList,
+  Channel, DeviceInfo, Hdd, Nas, RecordItem, RecordSearchResult, RecordStatus, SessionParams, Storages, TimeStatus, User
+} from './local';
+import {
+  RemoteChannel, RemoteChannelResult, RemoteDailyRecordStatus, RemoteDeviceInfo, RemoteHdd, RemoteNas,
+  RemoteRecordSearchResult, RemoteSearchRecordItem,
+  RemoteSessionParams, RemoteStorageList,
   RemoteTimeStatus,
   RemoteUser,
   RemoteUserList
@@ -153,6 +157,44 @@ export class RTL {
       hdd,
       nas,
       mode: storages.storage.workMode
+    };
+  }
+
+  public static getDailyRecordStatus(yearMonth: Date, status: RemoteDailyRecordStatus): RecordStatus[] {
+    return status.trackDailyDistribution.dayList.day.map(day => {
+      return {
+        day: new Date(yearMonth.getFullYear(), yearMonth.getMonth(), parseInt(day.dayOfMonth)),
+        hasRecord: day.record === 'true',
+        recordType: day.recordType
+      };
+    });
+  }
+
+  private static searchRecord(remote: RemoteSearchRecordItem): RecordItem {
+    return {
+      startTime: new Date(remote.timeSpan.startTime),
+      endDate: new Date(remote.timeSpan.endTime),
+      sourceId: remote.sourceID,
+      trackId: remote.trackID,
+      playbackUrl: remote.mediaSegmentDescriptor.playbackURI
+    };
+  }
+
+  public static searchRecords(data: RemoteRecordSearchResult): RecordSearchResult {
+    const items = data.CMSearchResult.matchList && data.CMSearchResult.matchList.searchMatchItem;
+    let list: RecordItem[] = [];
+    if (items) {
+      if (Array.isArray(items)) {
+        list = items.map(remote => {
+          return this.searchRecord(remote);
+        });
+      } else {
+        list = [this.searchRecord(items)];
+      }
+    }
+    return {
+      total: parseInt(data.CMSearchResult.numOfMatches),
+      list
     };
   }
 }

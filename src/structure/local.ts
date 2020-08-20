@@ -77,3 +77,22 @@ export interface Storages {
   nas: Nas[]
   mode: string
 }
+
+export interface RecordStatus {
+  day: Date
+  hasRecord: boolean
+  recordType?: string
+}
+
+export interface RecordItem {
+  startTime: Date
+  endDate: Date
+  sourceId: string
+  trackId: string
+  playbackUrl: string
+}
+
+export interface RecordSearchResult {
+  total: number
+  list: RecordItem[]
+}

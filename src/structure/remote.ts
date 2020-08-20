@@ -206,3 +206,42 @@ export interface RemoteFormatStatus {
     percent: string // number
   }
 }
+
+export interface RemoteDailyRecordStatus {
+  trackDailyDistribution: {
+    dayList: {
+      day: {
+        id: string
+        dayOfMonth: string
+        record: 'true' | 'false'
+        recordType?: 'time'
+      }[]
+    }
+  }
+}
+
+export interface RemoteSearchRecordItem {
+  sourceID: string
+  trackID: string
+  timeSpan: {
+    startTime: string
+    endTime: string
+  },
+  mediaSegmentDescriptor: {
+    contentType: string
+    codecType: string
+    playbackURI: string
+  }
+}
+
+export interface RemoteRecordSearchResult {
+  CMSearchResult: {
+    searchID: string
+    responseStatus: 'true' | 'false'
+    responseStatusStrg: 'OK' | 'NO MATCHES'
+    numOfMatches: string
+    matchList?: {
+      searchMatchItem: RemoteSearchRecordItem | RemoteSearchRecordItem[]
+    }
+  }
+}
