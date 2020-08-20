@@ -10,15 +10,17 @@
     "build": "webpack",
     "run": "tsc && node dist/index.js"
   },
+  "author": "ChenLuo",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/ChenLuoi/hikvision-api"
   },
+  "bugs": "https://github.com/ChenLuoi/hikvision-api/issues",
+  "homepage": "https://github.com/ChenLuoi/hikvision-api#readme",
   "keywords": [
     "typescript",
     "hikvision"
   ],
-  "author": "ChenLuo",
   "dependencies": {
     "@types/xml2js": "^0.4.5",
     "axios": "^0.19.2",
