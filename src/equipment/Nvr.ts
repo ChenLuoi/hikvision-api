@@ -214,7 +214,7 @@ export class Nvr extends Base {
       const channels = await this.fetchChannels();
       const channel = channels.find(c => c.address === data);
       if (channel) {
-        channelId = Number(channel.id);
+        channelId = channel.id;
       }
     }
     const result = await this.request.delete<NvrResponse>(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}`, {

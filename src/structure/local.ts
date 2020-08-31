@@ -21,7 +21,7 @@ export interface DeviceInfo {
 }
 
 export interface Channel {
-  id: string,
+  id: number,
   name: string
   addressType: string
   address: string
@@ -42,7 +42,7 @@ export interface TimeStatus {
 }
 
 export interface User {
-  id: string
+  id: number
   userName: string
   type: 'Administrator' | 'Operator' | 'Viewer'
   password?: string

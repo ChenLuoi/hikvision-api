@@ -181,7 +181,7 @@ export abstract class Base {
       const users = await this.fetchUsers();
       const user = users.find(u => u.userName === data);
       if (user) {
-        userId = Number(user.id);
+        userId = user.id;
       }
     }
     let result;

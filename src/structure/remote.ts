@@ -2,8 +2,8 @@ export interface RemoteSessionParams {
   SessionLoginCap: {
     sessionID: string,
     challenge: string,
-    iterations: string,
-    isIrreversible: string,
+    iterations: number,
+    isIrreversible: boolean,
     salt: string
   }
 }
@@ -25,20 +25,20 @@ export interface RemoteLoginResult {
 }
 
 export interface RemoteChannel {
-  id: string,
+  id: number,
   name: string,
   sourceInputPortDescriptor: {
     proxyProtocol: string,
     addressingFormatType: string,
     ipAddress: string,
-    managePortNo: string,
-    srcInputPort: string,
+    managePortNo: number,
+    srcInputPort: number,
     userName: string,
     streamType: string,
     deviceID: string
   }
-  enableAnr: string,
-  enableTiming: string
+  enableAnr: boolean,
+  enableTiming: boolean
 }
 
 export interface RemoteChannelResult {
@@ -73,7 +73,7 @@ export interface RemoteTimeStatus {
 
 export interface RemoteSSHStatus {
   SSH: {
-    enabled: 'true' | 'false'
+    enabled: boolean
   }
 }
 
@@ -110,7 +110,7 @@ export interface RemoteSearchResult {
 }
 
 export interface RemoteUser {
-  id: string
+  id: number
   userName: string
   userLevel: 'Administrator' | 'Operator' | 'Viewer'
   bondIpAddressList: {
@@ -127,7 +127,7 @@ export interface RemoteUser {
     }
   },
   attribute: {
-    inherent: 'true' | 'false'
+    inherent: boolean
   }
 }
 
@@ -144,23 +144,23 @@ export interface SecurityVersion {
     userBondMacNums: string
     securityVersion: { '$': any },
     keyIterateNum: string,
-    isSupportUserCheck: 'true' | 'false'
-    isIrreversible: 'true' | 'false'
+    isSupportUserCheck: boolean
+    isIrreversible: boolean
     salt: string
-    isSupportGUIDFileDataExport: 'true' | 'false'
-    isSupportSecurityQuestionConfig: 'true' | 'false'
-    isSupportGetOnlineUserListSC: 'true' | 'false'
+    isSupportGUIDFileDataExport: boolean
+    isSupportSecurityQuestionConfig: boolean
+    isSupportGetOnlineUserListSC: boolean
     SecurityLimits: {
       LoginPasswordLenLimit: any,
       SecurityAnswerLenLimit: any
     },
     RSAKeyLength: { '$': any },
-    isSupportONVIFUserManagement: 'true' | 'false'
+    isSupportONVIFUserManagement: boolean
     WebCertificateCap: { CertificateType: any },
-    isSupportConfigFileImport: 'true' | 'false'
-    isSupportConfigFileExport: 'true' | 'false'
+    isSupportConfigFileImport: boolean
+    isSupportConfigFileExport: boolean
     cfgFileSecretKeyLenLimit: { '$': any },
-    isSupportPictureURlCertificate: 'true' | 'false'
+    isSupportPictureURlCertificate: boolean
   }
 }
 
@@ -179,7 +179,7 @@ export interface RemoteNas {
   id: string
   addressingFormatType: string
   ipAddress: string
-  portNo: string
+  portNo: number
   nasType: string
   path: string
   status: string
@@ -202,7 +202,7 @@ export interface RemoteStorageList {
 
 export interface RemoteFormatStatus {
   formatStatus: {
-    formating: 'true' | 'false'
+    formating: boolean
     percent: string // number
   }
 }
@@ -213,7 +213,7 @@ export interface RemoteDailyRecordStatus {
       day: {
         id: string
         dayOfMonth: string
-        record: 'true' | 'false'
+        record: boolean
         recordType?: 'time'
       }[]
     }
@@ -237,7 +237,7 @@ export interface RemoteSearchRecordItem {
 export interface RemoteRecordSearchResult {
   CMSearchResult: {
     searchID: string
-    responseStatus: 'true' | 'false'
+    responseStatus: boolean
     responseStatusStrg: 'OK' | 'NO MATCHES'
     numOfMatches: string
     matchList?: {

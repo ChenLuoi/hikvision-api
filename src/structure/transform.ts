@@ -16,8 +16,8 @@ export class RTL {
     return {
       sessionId: cap.sessionID,
       challenge: cap.challenge,
-      iterations: Number(cap.iterations),
-      isIrreversible: cap.isIrreversible === 'true',
+      iterations: cap.iterations,
+      isIrreversible: cap.isIrreversible,
       salt: cap.salt || ''
     };
   }
@@ -46,13 +46,13 @@ export class RTL {
       addressType: channel.sourceInputPortDescriptor.addressingFormatType,
       address: channel.sourceInputPortDescriptor.ipAddress,
       protocol: channel.sourceInputPortDescriptor.proxyProtocol,
-      managePort: Number(channel.sourceInputPortDescriptor.managePortNo),
-      inputPort: Number(channel.sourceInputPortDescriptor.srcInputPort),
+      managePort: channel.sourceInputPortDescriptor.managePortNo,
+      inputPort: channel.sourceInputPortDescriptor.srcInputPort,
       userName: channel.sourceInputPortDescriptor.userName,
       streamType: channel.sourceInputPortDescriptor.streamType,
       deviceId: channel.sourceInputPortDescriptor.deviceID,
-      enableAnr: channel.enableAnr === 'true',
-      enableTiming: channel.enableTiming === 'true'
+      enableAnr: channel.enableAnr,
+      enableTiming: channel.enableTiming
     };
   }
 
@@ -120,7 +120,7 @@ export class RTL {
       id: nas.id,
       addressingFormatType: nas.addressingFormatType,
       ipAddress: nas.ipAddress,
-      port: Number(nas.portNo),
+      port: nas.portNo,
       type: nas.nasType,
       path: nas.path,
       status: nas.status,
@@ -164,7 +164,7 @@ export class RTL {
     return status.trackDailyDistribution.dayList.day.map(day => {
       return {
         day: new Date(yearMonth.getFullYear(), yearMonth.getMonth(), parseInt(day.dayOfMonth)),
-        hasRecord: day.record === 'true',
+        hasRecord: day.record,
         recordType: day.recordType
       };
     });
