@@ -1,14 +1,15 @@
 {
   "name": "hikvision-api",
-  "version": "1.0.0",
+  "version": "0.1.26",
   "main": "dist/bundle.js",
+  "browser": "dist/browser.js",
   "typings": "index.d.ts",
   "description": "a simple toolkit to connect and control some equipments of hikvision",
   "license": "MIT",
   "scripts": {
     "test": "jest",
     "build": "webpack",
-    "run": "tsc && node dist/index.js"
+    "run": "webpack && node dist/bundle.js"
   },
   "author": "ChenLuo",
   "repository": {
@@ -23,12 +24,16 @@
   ],
   "dependencies": {
     "@types/xml2js": "^0.4.5",
-    "axios": "^0.19.2",
+    "axios": "^0.20.0",
+    "threads": "^1.6.3",
+    "ws": "^7.3.1",
     "xml2js": "^0.4.23"
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.10.4",
     "@types/jest": "^26.0.7",
+    "@types/ws": "^7.2.6",
+    "copy-webpack-plugin": "^6.0.3",
     "jest": "^26.1.0",
     "ts-jest": "^26.1.4",
     "typescript": "^3.9.7",

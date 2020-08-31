@@ -1,5 +1,4 @@
-import { AxiosResponse } from 'axios';
-import { Channel, RecordStatus, Storages } from '../structure/local';
+import { Channel, RecordSearchResult, RecordStatus, Storages } from '../structure/local';
 import {
   NvrResponse, RemoteChannelResult, RemoteDailyRecordStatus, RemoteFormatStatus, RemoteLoginResult,
   RemoteRecordSearchResult, RemoteSearchResult,
@@ -8,16 +7,20 @@ import {
   SecurityVersion
 } from '../structure/remote';
 import { RTL } from '../structure/transform';
+import { ChannelConnection } from '../utils/ChannelConnection';
 import { formatDate, generateUUID } from '../utils/Common';
 import { XmlHandler } from '../utils/XmlHandler';
 import { Base, BaseConfig } from './Base';
 
 export interface NvrConfig extends BaseConfig {
   wsPort?: number
+  wasmUrl?: string
 }
 
 export class Nvr extends Base {
   protected readonly wsPort: number = 7681;
+  private readonly wasmUrl: string;
+  private heart?: NodeJS.Timeout;
 
   protected get headers(): any {
     return this.useProxy
@@ -32,7 +35,16 @@ export class Nvr extends Base {
 
   constructor(config: NvrConfig) {
     super(config);
+    this.wasmUrl = config.wasmUrl || '';
     this.wsPort = config.wsPort || 7681;
+  }
+
+  public getWasmUrl() {
+    return this.wasmUrl;
+  }
+
+  public getIp(): string {
+    return this.ip;
   }
 
   public async getWebsocketUrl(): Promise<string> {
@@ -71,7 +83,7 @@ export class Nvr extends Base {
       headers: this.headers
     });
     const json = await XmlHandler.parser<RemoteSSHStatus>(response.data);
-    return json.SSH.enabled === 'true';
+    return json.SSH.enabled;
   }
 
   public async setSSHStatus(enable: boolean): Promise<boolean> {
@@ -90,7 +102,7 @@ export class Nvr extends Base {
 
 
   public async zoom(channelId: number, param: number) {
-    const result = await this.request.put(`/ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/continuous`,
+    await this.request.put(`/ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/continuous`,
       XmlHandler.build({
         PTZData: {
           zoom: param
@@ -101,7 +113,7 @@ export class Nvr extends Base {
   }
 
   public async iris(channelId: number, param: number) {
-    const result = await this.request.put(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}/video/iris`,
+    await this.request.put(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}/video/iris`,
       XmlHandler.build({
         IrisData: {
           iris: param
@@ -112,7 +124,7 @@ export class Nvr extends Base {
   }
 
   public async focus(channelId: number, param: number) {
-    const result = await this.request.put(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}/video/focus`,
+    await this.request.put(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}/video/focus`,
       XmlHandler.build({
         FocusData: {
           focus: param
@@ -123,7 +135,7 @@ export class Nvr extends Base {
   }
 
   public async autoPan(channelId: number, param: number) {
-    const result = await this.request.put(`ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/autoPan`,
+    await this.request.put(`ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/autoPan`,
       XmlHandler.build({
         autoPanData: {
           autoPan: param
@@ -134,7 +146,7 @@ export class Nvr extends Base {
   }
 
   public async direction(channelId: number, horizontal: number, vertical: number) {
-    const result = await this.request.put(`/ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/continuous`,
+    await this.request.put(`/ISAPI/ContentMgmt/PTZCtrlProxy/channels/${channelId}/continuous`,
       XmlHandler.build({
         PTZData: {
           pan: horizontal,
@@ -171,6 +183,27 @@ export class Nvr extends Base {
         this.session = response.headers['set-cookie'][0] || '';
       }
     }
+    this.startHeart();
+  }
+
+  public async disconnect() {
+    await this.request.put('/ISAPI/Security/sessionLogout', null, {
+      headers: this.headers
+    });
+    this.stopHeart();
+  }
+
+  private startHeart() {
+    this.stopHeart();
+    this.heart = setInterval(async () => {
+      await this.request.put('/ISAPI/Security/sessionHeartbeat', {
+        headers: this.headers
+      });
+    }, 3000);
+  }
+
+  private stopHeart() {
+    this.heart && clearInterval(this.heart);
   }
 
   public async fetchChannels(): Promise<Channel[]> {
@@ -202,7 +235,7 @@ export class Nvr extends Base {
       {
         headers: this.headers
       });
-    const json = await XmlHandler.parser<any>(response.data);
+    await XmlHandler.parser<any>(response.data);
   }
 
   public async deleteChannel(channelId: number): Promise<void>;
@@ -217,7 +250,7 @@ export class Nvr extends Base {
         channelId = channel.id;
       }
     }
-    const result = await this.request.delete<NvrResponse>(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}`, {
+    await this.request.delete<NvrResponse>(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}`, {
       headers: this.headers
     });
   }
@@ -255,7 +288,7 @@ export class Nvr extends Base {
           }
         }
       };
-      request.then(async(response) => {
+      request.then(async (response) => {
         const r = await XmlHandler.parser<NvrResponse>(response.data);
         if (r.ResponseStatus.statusCode !== '1') {
           throw new Error(r.ResponseStatus.subStatusCode);
@@ -300,7 +333,8 @@ export class Nvr extends Base {
   }
 
 
-  public async searchRecords(channelId: number, streamType: number, startTime: Date, endTime: Date, pageNo: number, pageSize: number) {
+  public async searchRecords(channelId: number, streamType: number, startTime: Date, endTime: Date, pageNo: number,
+    pageSize: number): Promise<RecordSearchResult> {
     const response = await this.request.post('/ISAPI/ContentMgmt/search',
       XmlHandler.build({
         CMSearchDescription: {
@@ -325,5 +359,9 @@ export class Nvr extends Base {
       });
     const result = await XmlHandler.parser<RemoteRecordSearchResult>(response.data);
     return RTL.searchRecords(result);
+  }
+
+  public getChannelConnect(): ChannelConnection {
+    return new ChannelConnection(this);
   }
 }

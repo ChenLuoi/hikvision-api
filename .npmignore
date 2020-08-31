@@ -3,3 +3,5 @@
 test/
 src/
 index.ts
+*.config.js
+tsconfig.json
