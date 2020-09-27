@@ -1,12 +1,19 @@
+export interface Event {
+  type: string,
+  data: any
+}
+
+type Listener = ((event: Event) => any)
+
 export class EventEmitter {
-  private _listeners?: Map<string, Function[]>;
+  private _listeners?: Map<string, Listener[]>;
 
   constructor() {
   }
 
-  public addEventListener(type: string, listener: Function) {
+  public addEventListener(type: string, listener: Listener) {
     if (this._listeners === undefined) {
-      this._listeners = new Map<string, Function[]>();
+      this._listeners = new Map<string, Listener[]>();
     }
     const listeners = this._listeners;
     const l = listeners.get(type);
@@ -17,7 +24,7 @@ export class EventEmitter {
     }
   }
 
-  public hasEventListener(type: string, listener: Function) {
+  public hasEventListener(type: string, listener: Listener) {
     if (this._listeners === undefined) {
       return false;
     }
@@ -26,7 +33,7 @@ export class EventEmitter {
     return l !== undefined && l.indexOf(listener) !== -1;
   }
 
-  public removeEventListener(type: string, listener: Function) {
+  public removeEventListener(type: string, listener: Listener) {
     if (this._listeners === undefined) {
       return;
     }
@@ -40,7 +47,7 @@ export class EventEmitter {
     }
   }
 
-  public dispatchEvent(event: { type: string, target?: any, data?: any }): boolean {
+  public dispatchEvent(event: { type: string, data: any }): boolean {
     if (this._listeners === undefined) {
       return false;
     }

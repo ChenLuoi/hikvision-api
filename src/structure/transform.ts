@@ -1,8 +1,11 @@
 import {
-  Channel, DeviceInfo, Hdd, Nas, RecordItem, RecordSearchResult, RecordStatus, SessionParams, Storages, TimeStatus, User
+  Channel, ChannelStatus, DeviceInfo, Hdd, Nas, RecordItem, RecordSearchResult, RecordStatus, SessionParams, Storages,
+  TimeStatus, User
 } from './local';
 import {
-  RemoteChannel, RemoteChannelResult, RemoteDailyRecordStatus, RemoteDeviceInfo, RemoteHdd, RemoteNas,
+  RemoteChannel, RemoteChannelResult, RemoteChannelStatus, RemoteChannelStatusResult, RemoteDailyRecordStatus,
+  RemoteDeviceInfo, RemoteHdd,
+  RemoteNas,
   RemoteRecordSearchResult, RemoteSearchRecordItem,
   RemoteSessionParams, RemoteStorageList,
   RemoteTimeStatus,
@@ -56,6 +59,14 @@ export class RTL {
     };
   }
 
+  public static channelStatus(status: RemoteChannelStatus): ChannelStatus {
+    return {
+      id: status.id,
+      ip: status.sourceInputPortDescriptor.ipAddress,
+      online: status.online
+    };
+  }
+
   public static fetchChannels(_channels: RemoteChannelResult): Channel[] {
     const channels = _channels.InputProxyChannelList.InputProxyChannel;
     if (channels) {
@@ -65,6 +76,21 @@ export class RTL {
         });
       } else {
         return [this.channel(channels)];
+      }
+    } else {
+      return [];
+    }
+  }
+
+  public static getChannelStatus(_status: RemoteChannelStatusResult): ChannelStatus[] {
+    const status = _status.InputProxyChannelStatusList.InputProxyChannelStatus;
+    if (status) {
+      if (Array.isArray(status)) {
+        return status.map(remote => {
+          return this.channelStatus(remote);
+        });
+      } else {
+        return [this.channelStatus(status)];
       }
     } else {
       return [];
@@ -172,8 +198,8 @@ export class RTL {
 
   private static searchRecord(remote: RemoteSearchRecordItem): RecordItem {
     return {
-      startTime: new Date(remote.timeSpan.startTime),
-      endDate: new Date(remote.timeSpan.endTime),
+      startTime: new Date(remote.timeSpan.startTime.replace(/[TZ]/g, ' ')),
+      endDate: new Date(remote.timeSpan.endTime.replace(/[TZ]/g, ' ')),
       sourceId: remote.sourceID,
       trackId: remote.trackID,
       playbackUrl: remote.mediaSegmentDescriptor.playbackURI
@@ -193,7 +219,8 @@ export class RTL {
       }
     }
     return {
-      total: parseInt(data.CMSearchResult.numOfMatches),
+      total: data.CMSearchResult.numOfMatches,
+      hasMore: data.CMSearchResult.responseStatusStrg === 'MORE',
       list
     };
   }

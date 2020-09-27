@@ -162,6 +162,12 @@ declare module 'hikvision-api' {
     recordType?: string
   }
 
+  export interface ChannelStatus {
+    id: number
+    ip: string
+    online: boolean
+  }
+
   export abstract class Base {
     readonly version: number;
 
@@ -239,21 +245,57 @@ declare module 'hikvision-api' {
     searchRecords(channelId: number, streamType: number, startTime: Date, endTime: Date, pageNo: number,
       pageSize: number): Promise<RecordSearchResult>;
 
-    public getChannelConnect(): ChannelConnection;
+    getChannelConnect(): ChannelConnection;
+
+    getChannelStatus(): Promise<ChannelStatus[]>
   }
 
+  interface FrameData {
+    data: ArrayBuffer
+    width: number
+    height: number
+    osdTime: string
+  }
+
+  interface VideoEvent {
+    type: 'video',
+    data: FrameData
+  }
+
+  interface CloseEvent {
+    type: 'close',
+    data: string
+  }
+
+  interface ConnectionEventMap {
+    'video': VideoEvent;
+    'close': CloseEvent;
+  }
 
   export class ChannelConnection {
-    public addEventListener(type: string, listener: Function);
+    addEventListener<K extends keyof ConnectionEventMap>(type: K,
+      listener: (event: ConnectionEventMap[K]) => any): void;
 
-    public hasEventListener(type: string, listener: Function);
+    hasEventListener<K extends keyof ConnectionEventMap>(type: K,
+      listener: (event: ConnectionEventMap[K]) => any);
 
-    public removeEventListener(type: string, listener: Function);
+    removeEventListener<K extends keyof ConnectionEventMap>(type: K,
+      listener: (event: ConnectionEventMap[K]) => any);
 
-    public dispatchEvent(event: { type: string, target?: any }): boolean;
+    dispatchEvent(event: { type: string, target?: any }): boolean;
 
-    public startRealPlay(channelId: number);
+    startRealPlay(channelId: number);
 
-    public init(): Promise<void>;
+    startPlayback(channelId: number, startTime: Date, endTime: Date);
+
+    init(): Promise<void>;
+  }
+
+  export class SuperRender {
+    constructor(canvas: HTMLCanvasElement);
+
+    displayFrameData(frame: FrameData);
+
+    destroy();
   }
 }

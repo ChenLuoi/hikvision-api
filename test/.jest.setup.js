@@ -1,9 +1,9 @@
 const _global = typeof window === 'undefined' ? global : window;
 _global.nvrConfig = {
-  ip: '1.1.1.1',
+  ip: '10.21.4.121',
   // port: 80
   user: 'admin',
-  password: '123456',
+  password: 'Abc.12345',
   // timeout: 10000,
   // proxy : 'http://127.0.0.1/'
   // wsPort: 7681,

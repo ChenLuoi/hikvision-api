@@ -1,7 +1,8 @@
 import WS from 'ws';
 import { Nvr } from '../equipment/Nvr';
+import { FrameData } from '../structure/local';
 import { getDecodeWorker } from '../worker/DecodeWorker';
-import { isBrowser } from './Common';
+import { formatDate, isBrowser } from './Common';
 import { Worker, BlobWorker } from 'threads';
 import { EventEmitter } from './EventEmitter';
 
@@ -11,6 +12,8 @@ interface IWebsocket {
   addEventListener(key: string, listener: (ev: { data: any }) => void): void
 
   send(msg: string): void
+
+  close(): void
 }
 
 export class ChannelConnection extends EventEmitter {
@@ -29,7 +32,7 @@ export class ChannelConnection extends EventEmitter {
   private isPlayRateChange: boolean = false;
   private inputDataLengths: number[] = [];
   private inputDataBuffer: number[] = [];
-  private videoFrameBuffer: { data: ArrayBuffer, osdTime: string }[] = [];
+  private videoFrameBuffer: FrameData[] = [];
   private decodeFrameType: 0 | 1 = 0;
   private rate = 1;
   public isInputBufferOver: boolean = false;
@@ -37,6 +40,7 @@ export class ChannelConnection extends EventEmitter {
   private width = 0;
   private height = 0;
   private isVisible: boolean = true;
+  private isDestroyed: boolean = false;
 
   public constructor(nvr: Nvr) {
     super();
@@ -92,17 +96,16 @@ export class ChannelConnection extends EventEmitter {
                   that.isFirstFrame = false;
                   that.width = data.frameInfo.width;
                   that.height = data.frameInfo.height;
-                  that.videoFrameBuffer.push({
+                  const frame = {
                     data: data.data,
+                    width: data.frameInfo.width,
+                    height: data.frameInfo.height,
                     osdTime: data.osd
-                  });
+                  };
+                  that.videoFrameBuffer.push(frame);
                   that.dispatchEvent({
                     type: 'video',
-                    target: that,
-                    data: {
-                      data: data.data,
-                      osdTime: data.osd
-                    }
+                    data: frame
                   });
                   that.videoFrameBuffer.length > 3 && (that.videoFrameBuffer.splice(0, 1));
                   break;
@@ -116,14 +119,18 @@ export class ChannelConnection extends EventEmitter {
     });
   }
 
-
   private initWebSocket(): Promise<void> {
     return new Promise<void>(async (resolve) => {
       const wsUrl = await this.nvr.getWebsocketUrl();
       this.websocket = isBrowser() ? new WebSocket(wsUrl) : new WS(wsUrl);
       this.websocket.binaryType = 'arraybuffer';
-      this.websocket.addEventListener('close', ev => {
-        console.log('websocket close', ev);
+      this.websocket.addEventListener('close', () => {
+        if (!this.isDestroyed) {
+          this.dispatchEvent({
+            type: 'close',
+            data: 'websocket'
+          });
+        }
       });
       this.websocket.addEventListener('open', () => {
         resolve();
@@ -163,6 +170,18 @@ export class ChannelConnection extends EventEmitter {
         }
       });
     });
+  }
+
+  public destroy() {
+    this.isDestroyed = true;
+    this.isPlay = false;
+    if (this.websocket) {
+      this.websocket.close();
+    }
+
+    if (this.worker) {
+      this.worker.terminate();
+    }
   }
 
   openStream(t: Uint8Array, e: number, n: number) {
@@ -325,6 +344,14 @@ export class ChannelConnection extends EventEmitter {
   }
 
   public startRealPlay(channelId: number) {
-    this.websocket.send(`{"sequence":0,"cmd":"realplay","url":"live://${this.nvr.getIp()}:7681/${32 + channelId}/0"}`);
+    this.websocket.send(`{"sequence":0,"cmd":"realplay","url":"live://${this.nvr.getIp()}:7681/${32 + channelId}/1"}`);
+  }
+
+  public startPlayback(channelId: number, startTime: Date, endTime: Date) {
+    const fmt = 'yyyy-MM-ddThh:mm:ssZ';
+    const start = formatDate(startTime, fmt);
+    const end = formatDate(endTime, fmt);
+    this.websocket.send(`{"sequence":0,"cmd":"playback","url":"live://${this.nvr.getIp()}:7681/${32 +
+    channelId}/0","startTime":"${start}","endTime":"${end}"}`);
   }
 }

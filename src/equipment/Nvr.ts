@@ -1,6 +1,7 @@
-import { Channel, RecordSearchResult, RecordStatus, Storages } from '../structure/local';
+import { Channel, ChannelStatus, RecordItem, RecordSearchResult, RecordStatus, Storages } from '../structure/local';
 import {
-  NvrResponse, RemoteChannelResult, RemoteDailyRecordStatus, RemoteFormatStatus, RemoteLoginResult,
+  NvrResponse, RemoteChannelResult, RemoteChannelStatusResult, RemoteDailyRecordStatus, RemoteFormatStatus,
+  RemoteLoginResult,
   RemoteRecordSearchResult, RemoteSearchResult,
   RemoteSSHStatus,
   RemoteStorageList,
@@ -183,7 +184,6 @@ export class Nvr extends Base {
         this.session = response.headers['set-cookie'][0] || '';
       }
     }
-    this.startHeart();
   }
 
   public async disconnect() {
@@ -191,15 +191,6 @@ export class Nvr extends Base {
       headers: this.headers
     });
     this.stopHeart();
-  }
-
-  private startHeart() {
-    this.stopHeart();
-    this.heart = setInterval(async () => {
-      await this.request.put('/ISAPI/Security/sessionHeartbeat', {
-        headers: this.headers
-      });
-    }, 3000);
   }
 
   private stopHeart() {
@@ -212,6 +203,14 @@ export class Nvr extends Base {
     });
     const channels = await XmlHandler.parser<RemoteChannelResult>(response.data);
     return RTL.fetchChannels(channels);
+  }
+
+  public async getChannelStatus(): Promise<ChannelStatus[]> {
+    const response = await this.request.get('/ISAPI/ContentMgmt/InputProxy/channels/status', {
+      headers: this.headers
+    });
+    const status = await XmlHandler.parser<RemoteChannelStatusResult>(response.data);
+    return RTL.getChannelStatus(status);
   }
 
   public async addChannel(data: { ip: string, userName: string, password: string, port?: number, protocol: string }) {
@@ -332,6 +331,19 @@ export class Nvr extends Base {
     return RTL.getDailyRecordStatus(_date, status);
   }
 
+  public async searchAllRecords(channelId: number, streamType: number, startTime: Date,
+    endTime: Date): Promise<RecordItem[]> {
+    let isEnd = false;
+    let pageNo = 1;
+    let pageSize = 100;
+    const result: RecordItem[] = [];
+    do {
+      const records = await this.searchRecords(channelId, streamType, startTime, endTime, pageNo, pageSize);
+      result.push(...records.list);
+      isEnd = !records.hasMore;
+    } while (!isEnd);
+    return result;
+  }
 
   public async searchRecords(channelId: number, streamType: number, startTime: Date, endTime: Date, pageNo: number,
     pageSize: number): Promise<RecordSearchResult> {

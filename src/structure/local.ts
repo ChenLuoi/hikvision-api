@@ -94,5 +94,19 @@ export interface RecordItem {
 
 export interface RecordSearchResult {
   total: number
+  hasMore: boolean
   list: RecordItem[]
+}
+
+export interface FrameData {
+  data: ArrayBuffer
+  width: number
+  height: number
+  osdTime: string
+}
+
+export interface ChannelStatus {
+  id: number
+  ip: string
+  online: boolean
 }

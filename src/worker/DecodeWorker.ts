@@ -1169,7 +1169,6 @@ export function getDecodeWorker(isBrowser: boolean, wasmUrl: string) {
           binary = new Uint8Array(binary);
         } else if (Module['readBinary']) {
           binary = Module['readBinary'](wasmBinaryFile);
-          console.log('binary', binary);
         } else {
           throw "on the web, we need the wasm binary to be preloaded and set on Module['wasmBinary']. emcc.py will do that for you when generating HTML (but not JS)";
         }
@@ -1182,7 +1181,6 @@ export function getDecodeWorker(isBrowser: boolean, wasmUrl: string) {
     function getBinaryPromise() {
       if (!Module['wasmBinary'] && (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) && typeof fetch === 'function') {
         return fetch(wasmBinaryFile, { credentials: 'same-origin' }).then(function(response) {
-          console.log('getBinaryPromise');
           if (!response['ok']) {
             throw "failed to load wasm binary file at '" + wasmBinaryFile + "'";
           }
@@ -1241,7 +1239,6 @@ export function getDecodeWorker(isBrowser: boolean, wasmUrl: string) {
 
       if (!Module['wasmBinary'] && typeof WebAssembly.instantiateStreaming === 'function') {
         WebAssembly.instantiateStreaming(fetch(wasmBinaryFile, { credentials: 'same-origin' }), info).then(function(output) {
-          console.log('WebAssembly.instantiateStreaming', output);
           receiveInstantiatedSource(output);
         }).catch(function(reason) {
           Module['printErr']('wasm streaming compile failed: ' + reason);
@@ -3283,7 +3280,6 @@ export function getDecodeWorker(isBrowser: boolean, wasmUrl: string) {
     var res = 0;
     switch (eventData.command) {
       case 'setWasmPath':
-        console.log(eventData.data);
         Module['wasmBinaryFile'] = eventData.data;
         break;
       case 'SetStreamOpenMode':
@@ -3303,7 +3299,6 @@ export function getDecodeWorker(isBrowser: boolean, wasmUrl: string) {
           return;
         }
         var aHead = Module.HEAPU8.subarray(pHead, pHead + iHeadLen);
-        console.log(eventData.data);
         aHead.set(eventData.data);
 
         res = Module._OpenStream(pHead, iHeadLen, eventData.bufPoolSize);
@@ -3352,9 +3347,7 @@ export function getDecodeWorker(isBrowser: boolean, wasmUrl: string) {
         break;
 
       case 'InputData':
-        // 接收到的数据
         var iLen = eventData.dataSize;
-        // console.log("DecodeWorker-InputData-len:%d", iLen);
 
         if (iLen > 0) {
           var pInputData = Module._malloc(iLen);
@@ -3362,13 +3355,10 @@ export function getDecodeWorker(isBrowser: boolean, wasmUrl: string) {
             return;
           }
           var inputData = new Uint8Array(eventData.data);
-          // var aInputData = Module.HEAPU8.subarray(pInputData, pInputData + iLen);
-          // aInputData.set(inputData);
           Module.writeArrayToMemory(inputData, pInputData);
           inputData = null;
 
           res = Module._InputData(pInputData, iLen);
-          // console.log("DecodeWorker-InputData-ret:%d", res);
           if (res !== HK_TRUE) {
             if (res === 98) {
               res = 1;
@@ -3386,9 +3376,6 @@ export function getDecodeWorker(isBrowser: boolean, wasmUrl: string) {
 
         while (bOpenMode && bOpenStream) {
           var ret = getFrameData(funGetFrameData);
-          // var ret = getFrameData();
-
-          // 直到获取视频帧或数据不足为止
           if (PLAYM4_VIDEO_FRAME === ret || PLAYM4_NEED_MORE_DATA === ret) {
             break;
           }

@@ -238,10 +238,33 @@ export interface RemoteRecordSearchResult {
   CMSearchResult: {
     searchID: string
     responseStatus: boolean
-    responseStatusStrg: 'OK' | 'NO MATCHES'
-    numOfMatches: string
+    responseStatusStrg: 'OK' | 'NO MATCHES' | 'MORE'
+    numOfMatches: number
     matchList?: {
       searchMatchItem: RemoteSearchRecordItem | RemoteSearchRecordItem[]
     }
+  }
+}
+
+export interface RemoteChannelStatus {
+  id: number
+  sourceInputPortDescriptor: {
+    proxyProtocol: string
+    addressingFormatType: string
+    ipAddress: string
+    managePortNo: number
+    srcInputPort: number
+    userName: string
+    streamType: string
+  }
+  online: boolean
+  SecurityStatus: {
+    PasswordStatus: 'weak' | 'risk'
+  }
+}
+
+export interface RemoteChannelStatusResult {
+  InputProxyChannelStatusList: {
+    InputProxyChannelStatus: RemoteChannelStatus | RemoteChannelStatus[]
   }
 }
