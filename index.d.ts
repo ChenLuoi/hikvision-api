@@ -267,9 +267,15 @@ declare module 'hikvision-api' {
     data: string
   }
 
+  interface RawDataEvent {
+    type: 'raw-data',
+    data: Uint8Array
+  }
+
   interface ConnectionEventMap {
     'video': VideoEvent;
     'close': CloseEvent;
+    'raw-data': RawDataEvent
   }
 
   export class ChannelConnection {
@@ -289,6 +295,12 @@ declare module 'hikvision-api' {
     startPlayback(channelId: number, startTime: Date, endTime: Date);
 
     init(): Promise<void>;
+
+    getHead(): Uint8Array;
+
+    getBmp(data: FrameData): Promise<Uint8Array>;
+
+    getJpeg(data: FrameData): Promise<Uint8Array>;
   }
 
   export class SuperRender {

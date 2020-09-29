@@ -112,6 +112,12 @@ export class ChannelConnection extends EventEmitter {
               }
             }
             break;
+          case 'GetBMP':
+            that.bmpCallback && that.bmpCallback(data.data);
+            break;
+          case 'GetJPEG':
+            that.jpegCallback && that.jpegCallback(data.data);
+            break;
         }
       };
       this.worker = BlobWorker.fromText(getDecodeWorker(isBrowser(), this.nvr.getWasmUrl()));
@@ -166,6 +172,10 @@ export class ChannelConnection extends EventEmitter {
           } else {
             decodeData = { isHead: false, buffer: data };
           }
+          this.dispatchEvent({
+            type: 'raw-data',
+            data: decodeData.buffer
+          });
           this.decode(decodeData);
         }
       });
@@ -353,5 +363,55 @@ export class ChannelConnection extends EventEmitter {
     const end = formatDate(endTime, fmt);
     this.websocket.send(`{"sequence":0,"cmd":"playback","url":"live://${this.nvr.getIp()}:7681/${32 +
     channelId}/0","startTime":"${start}","endTime":"${end}"}`);
+  }
+
+  public getHead() {
+    return this.aHead;
+  }
+
+  private bmpCallback: ((data: Uint8Array) => void) | null = null;
+  private jpegCallback: ((data: Uint8Array) => void) | null = null;
+
+  public async getBmp(data: FrameData) {
+    return this.getImage(data, 'bmp');
+  }
+
+
+  public async getJpeg(data: FrameData) {
+    return this.getImage(data, 'jpeg');
+  }
+
+  private static arrayBufferCopy(_src: ArrayBuffer): Uint8Array {
+    const length = _src.byteLength;
+    const src = new Uint8Array(_src);
+    const dest = new Uint8Array(length);
+    for (let r = 0; r < length; r++) {
+      dest[r] = src[r];
+    }
+    return dest;
+  }
+
+  private async getImage(data: FrameData, type: 'jpeg' | 'bmp') {
+    return new Promise<Uint8Array>((resolve) => {
+      const r = {
+        command: type === 'jpeg' ? 'GetJPEG' : 'GetBMP',
+        data: ChannelConnection.arrayBufferCopy(data.data).buffer,
+        width: data.width,
+        height: data.height,
+        rect: {
+          left: 0, top: 0, right: 0, bottom: 0
+        }
+      };
+      if (type === 'jpeg') {
+        this.jpegCallback = (data: Uint8Array) => {
+          resolve(data);
+        };
+      } else {
+        this.bmpCallback = (data: Uint8Array) => {
+          resolve(data);
+        };
+      }
+      this.worker.postMessage(r, [r.data]);
+    });
   }
 }

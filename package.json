@@ -1,6 +1,6 @@
 {
   "name": "hikvision-api",
-  "version": "0.1.34",
+  "version": "0.1.41",
   "main": "dist/bundle.js",
   "browser": "dist/browser.js",
   "typings": "index.d.ts",
