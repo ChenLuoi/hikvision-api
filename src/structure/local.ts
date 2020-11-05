@@ -108,5 +108,6 @@ export interface FrameData {
 export interface ChannelStatus {
   id: number
   ip: string
+  sourceChannel: number
   online: boolean
 }

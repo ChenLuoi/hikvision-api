@@ -63,6 +63,7 @@ export class RTL {
     return {
       id: status.id,
       ip: status.sourceInputPortDescriptor.ipAddress,
+      sourceChannel: status.sourceInputPortDescriptor.srcInputPort,
       online: status.online
     };
   }

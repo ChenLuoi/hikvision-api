@@ -15,13 +15,15 @@ import { Base, BaseConfig } from './Base';
 
 export interface NvrConfig extends BaseConfig {
   wsPort?: number
-  wasmUrl?: string
+  wasmUrl?: string,
+  channelOffset: number
 }
 
 export class Nvr extends Base {
   protected readonly wsPort: number = 7681;
   private readonly wasmUrl: string;
   private heart?: NodeJS.Timeout;
+  private channelOffset = 32;
 
   protected get headers(): any {
     return this.useProxy
@@ -38,6 +40,7 @@ export class Nvr extends Base {
     super(config);
     this.wasmUrl = config.wasmUrl || '';
     this.wsPort = config.wsPort || 7681;
+    this.channelOffset = config.channelOffset;
   }
 
   public getWasmUrl() {
@@ -46,6 +49,10 @@ export class Nvr extends Base {
 
   public getIp(): string {
     return this.ip;
+  }
+
+  public getChannelOffset(): number {
+    return this.channelOffset;
   }
 
   public async getWebsocketUrl(): Promise<string> {
@@ -61,7 +68,7 @@ export class Nvr extends Base {
     return JSON.stringify({
       sequence: 0,
       cmd: 'realplay',
-      live: `live://${this.ip}:${this.wsPort}/${32 + channelId}/1`
+      live: `live://${this.ip}:${this.wsPort}/${this.channelOffset + channelId}/1`
     });
   }
 

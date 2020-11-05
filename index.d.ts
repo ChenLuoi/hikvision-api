@@ -69,6 +69,7 @@ declare module 'hikvision-api' {
   export interface NvrConfig extends BaseConfig {
     wsPort?: number;
     wasmUrl?: string;
+    channelOffset: number;
   }
 
   export interface DeviceInfo {
@@ -165,6 +166,7 @@ declare module 'hikvision-api' {
   export interface ChannelStatus {
     id: number
     ip: string
+    sourceChannel: number
     online: boolean
   }
 
@@ -283,16 +285,16 @@ declare module 'hikvision-api' {
       listener: (event: ConnectionEventMap[K]) => any): void;
 
     hasEventListener<K extends keyof ConnectionEventMap>(type: K,
-      listener: (event: ConnectionEventMap[K]) => any);
+      listener: (event: ConnectionEventMap[K]) => any): boolean;
 
     removeEventListener<K extends keyof ConnectionEventMap>(type: K,
-      listener: (event: ConnectionEventMap[K]) => any);
+      listener: (event: ConnectionEventMap[K]) => any): void;
 
     dispatchEvent(event: { type: string, target?: any }): boolean;
 
-    startRealPlay(channelId: number);
+    startRealPlay(channelId: number): void;
 
-    startPlayback(channelId: number, startTime: Date, endTime: Date);
+    startPlayback(channelId: number, startTime: Date, endTime: Date): void;
 
     init(): Promise<void>;
 
@@ -301,13 +303,19 @@ declare module 'hikvision-api' {
     getBmp(data: FrameData): Promise<Uint8Array>;
 
     getJpeg(data: FrameData): Promise<Uint8Array>;
+
+    destroy(): void;
+
+    pause(): void;
+
+    resume(): void;
   }
 
   export class SuperRender {
     constructor(canvas: HTMLCanvasElement);
 
-    displayFrameData(frame: FrameData);
+    displayFrameData(frame: FrameData): void;
 
-    destroy();
+    destroy(): void;
   }
 }

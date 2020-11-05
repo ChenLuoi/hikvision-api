@@ -41,6 +41,7 @@ export class ChannelConnection extends EventEmitter {
   private height = 0;
   private isVisible: boolean = true;
   private isDestroyed: boolean = false;
+  private isRecoverable: boolean = false;
 
   public constructor(nvr: Nvr) {
     super();
@@ -59,6 +60,10 @@ export class ChannelConnection extends EventEmitter {
           reject(error);
         });
     });
+  }
+
+  public setRecoverable(value: boolean) {
+    this.isRecoverable = value;
   }
 
   private async initDecodeWorker(): Promise<void> {
@@ -132,6 +137,9 @@ export class ChannelConnection extends EventEmitter {
       this.websocket.binaryType = 'arraybuffer';
       this.websocket.addEventListener('close', () => {
         if (!this.isDestroyed) {
+          if (this.isRecoverable) {
+            this.initWebSocket();
+          }
           this.dispatchEvent({
             type: 'close',
             data: 'websocket'
@@ -354,15 +362,26 @@ export class ChannelConnection extends EventEmitter {
   }
 
   public startRealPlay(channelId: number) {
-    this.websocket.send(`{"sequence":0,"cmd":"realplay","url":"live://${this.nvr.getIp()}:7681/${32 + channelId}/1"}`);
+    this.websocket.send(
+      `{"sequence":0,"cmd":"realplay","url":"live://${this.nvr.getIp()}:7681/${this.nvr.getChannelOffset() +
+      channelId}/1"}`);
   }
 
   public startPlayback(channelId: number, startTime: Date, endTime: Date) {
     const fmt = 'yyyy-MM-ddThh:mm:ssZ';
     const start = formatDate(startTime, fmt);
     const end = formatDate(endTime, fmt);
-    this.websocket.send(`{"sequence":0,"cmd":"playback","url":"live://${this.nvr.getIp()}:7681/${32 +
-    channelId}/0","startTime":"${start}","endTime":"${end}"}`);
+    this.websocket.send(
+      `{"sequence":0,"cmd":"playback","url":"live://${this.nvr.getIp()}:7681/${this.nvr.getChannelOffset() +
+      channelId}/0","startTime":"${start}","endTime":"${end}"}`);
+  }
+
+  public pause() {
+    this.websocket.send('{"sequence":0,"cmd":"pause"}');
+  }
+
+  public resume() {
+    this.websocket.send('{"sequence":0,"cmd":"resume"}');
   }
 
   public getHead() {
