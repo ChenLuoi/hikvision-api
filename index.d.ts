@@ -231,7 +231,10 @@ declare module 'hikvision-api' {
       password: string;
       port?: number;
       protocol: string;
-    }): Promise<void>;
+    }): Promise<number>;
+
+    editChannel(channelId: number,
+      data: { ip: string, userName: string, password: string, port?: number, protocol: string }): Promise<void>
 
     deleteChannel(channelId: number): Promise<void>;
     deleteChannel(address: string): Promise<void>;
@@ -249,7 +252,9 @@ declare module 'hikvision-api' {
 
     getChannelConnect(): ChannelConnection;
 
-    getChannelStatus(): Promise<ChannelStatus[]>
+    getChannelStatus(): Promise<ChannelStatus[]>;
+
+    getCameraStatus(ip: string, sourceChannel: number): Promise<ChannelStatus | null>;
   }
 
   interface FrameData {
@@ -274,10 +279,16 @@ declare module 'hikvision-api' {
     data: Uint8Array
   }
 
+  interface DataStopEvent {
+    type: 'data-stop',
+    data: number
+  }
+
   interface ConnectionEventMap {
     'video': VideoEvent;
     'close': CloseEvent;
-    'raw-data': RawDataEvent
+    'raw-data': RawDataEvent;
+    'data-stop': DataStopEvent;
   }
 
   export class ChannelConnection {
@@ -292,9 +303,9 @@ declare module 'hikvision-api' {
 
     dispatchEvent(event: { type: string, target?: any }): boolean;
 
-    startRealPlay(channelId: number): void;
+    startRealPlay(channelId: number, stream: number = 1): void;
 
-    startPlayback(channelId: number, startTime: Date, endTime: Date): void;
+    startPlayback(channelId: number, startTime: Date, endTime: Date, stream: number = 0): void;
 
     init(): Promise<void>;
 

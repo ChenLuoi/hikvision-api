@@ -40,8 +40,9 @@ export class ChannelConnection extends EventEmitter {
   private width = 0;
   private height = 0;
   private isVisible: boolean = true;
-  private isDestroyed: boolean = false;
+  private isDestroyed: boolean = true;
   private isRecoverable: boolean = false;
+  private dataStopListener: NodeJS.Timeout | null = null;
 
   public constructor(nvr: Nvr) {
     super();
@@ -54,9 +55,11 @@ export class ChannelConnection extends EventEmitter {
         this.initDecodeWorker(),
         this.initWebSocket()
       ])
-        .then(() => resolve())
+        .then(() => {
+          this.isDestroyed = false;
+          resolve();
+        })
         .catch(error => {
-          console.log(error);
           reject(error);
         });
     });
@@ -180,6 +183,13 @@ export class ChannelConnection extends EventEmitter {
           } else {
             decodeData = { isHead: false, buffer: data };
           }
+          this.dataStopListener && clearTimeout(this.dataStopListener);
+          this.dataStopListener = setTimeout(() => {
+            this.dispatchEvent({
+              type: 'data-stop',
+              data: Date.now()
+            });
+          }, 5000);
           this.dispatchEvent({
             type: 'raw-data',
             data: decodeData.buffer
@@ -361,19 +371,19 @@ export class ChannelConnection extends EventEmitter {
     return new Uint8Array(mediaInfo);
   }
 
-  public startRealPlay(channelId: number) {
+  public startRealPlay(channelId: number, stream: number = 1) {
     this.websocket.send(
       `{"sequence":0,"cmd":"realplay","url":"live://${this.nvr.getIp()}:7681/${this.nvr.getChannelOffset() +
-      channelId}/1"}`);
+      channelId}/${stream}"}`);
   }
 
-  public startPlayback(channelId: number, startTime: Date, endTime: Date) {
+  public startPlayback(channelId: number, startTime: Date, endTime: Date, stream: number = 0) {
     const fmt = 'yyyy-MM-ddThh:mm:ssZ';
     const start = formatDate(startTime, fmt);
     const end = formatDate(endTime, fmt);
     this.websocket.send(
       `{"sequence":0,"cmd":"playback","url":"live://${this.nvr.getIp()}:7681/${this.nvr.getChannelOffset() +
-      channelId}/0","startTime":"${start}","endTime":"${end}"}`);
+      channelId}/${stream}","startTime":"${start}","endTime":"${end}"}`);
   }
 
   public pause() {

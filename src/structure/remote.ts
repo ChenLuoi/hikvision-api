@@ -268,3 +268,13 @@ export interface RemoteChannelStatusResult {
     InputProxyChannelStatus: RemoteChannelStatus | RemoteChannelStatus[]
   }
 }
+
+export interface RemoteAddChannelResult {
+  ResponseStatus: {
+    requestURL: string
+    statusCode: number
+    statusString: string
+    id: number
+    subStatusCode: string
+  }
+}

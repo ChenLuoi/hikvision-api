@@ -1,6 +1,7 @@
 import { Channel, ChannelStatus, RecordItem, RecordSearchResult, RecordStatus, Storages } from '../structure/local';
 import {
-  NvrResponse, RemoteChannelResult, RemoteChannelStatusResult, RemoteDailyRecordStatus, RemoteFormatStatus,
+  NvrResponse, RemoteAddChannelResult, RemoteChannelResult, RemoteChannelStatusResult, RemoteDailyRecordStatus,
+  RemoteFormatStatus,
   RemoteLoginResult,
   RemoteRecordSearchResult, RemoteSearchResult,
   RemoteSSHStatus,
@@ -16,7 +17,7 @@ import { Base, BaseConfig } from './Base';
 export interface NvrConfig extends BaseConfig {
   wsPort?: number
   wasmUrl?: string,
-  channelOffset: number
+  channelOffset?: number
 }
 
 export class Nvr extends Base {
@@ -40,7 +41,7 @@ export class Nvr extends Base {
     super(config);
     this.wasmUrl = config.wasmUrl || '';
     this.wsPort = config.wsPort || 7681;
-    this.channelOffset = config.channelOffset;
+    this.channelOffset = config.channelOffset ?? 32;
   }
 
   public getWasmUrl() {
@@ -220,28 +221,72 @@ export class Nvr extends Base {
     return RTL.getChannelStatus(status);
   }
 
-  public async addChannel(data: { ip: string, userName: string, password: string, port?: number, protocol: string }) {
-    const response = await this.request.post('/ISAPI/ContentMgmt/InputProxy/channels',
-      XmlHandler.build({
-        InputProxyChannel: {
-          id: 0,
-          quickAdd: false,
-          sourceInputPortDescriptor: {
-            ipAddress: data.ip,
-            managePortNo: data.port || 8000,
-            srcInputPort: 1,
-            userName: data.userName,
-            password: data.password,
-            streamType: 'auto',
-            addressingFormatType: 'ipaddress',
-            proxyProtocol: data.protocol
+  public async addChannel(data: { ip: string, userName: string, password: string, port?: number, protocol: string }): Promise<number> {
+    let _result;
+    try {
+      const response = await this.request.post('/ISAPI/ContentMgmt/InputProxy/channels',
+        XmlHandler.build({
+          InputProxyChannel: {
+            id: 0,
+            quickAdd: false,
+            sourceInputPortDescriptor: {
+              ipAddress: data.ip,
+              managePortNo: data.port || 8000,
+              srcInputPort: 1,
+              userName: data.userName,
+              password: data.password,
+              streamType: 'auto',
+              addressingFormatType: 'ipaddress',
+              proxyProtocol: data.protocol
+            }
           }
-        }
-      }),
-      {
-        headers: this.headers
-      });
-    await XmlHandler.parser<any>(response.data);
+        }),
+        {
+          headers: this.headers
+        });
+      _result = response.data;
+    } catch (e) {
+      _result = e.response.data;
+    }
+    const result = await XmlHandler.parser<RemoteAddChannelResult>(_result);
+    if (result.ResponseStatus.statusCode === 1) {
+      return result.ResponseStatus.id || -1;
+    }
+    return -1;
+  }
+
+  public async editChannel(channelId: number,
+    data: { ip: string, userName: string, password: string, port?: number, protocol: string }): Promise<void> {
+    let _result;
+    try {
+      const response = await this.request.put(`/ISAPI/ContentMgmt/InputProxy/channels/${channelId}`,
+        XmlHandler.build({
+          InputProxyChannel: {
+            id: channelId,
+            quickAdd: false,
+            sourceInputPortDescriptor: {
+              ipAddress: data.ip,
+              managePortNo: data.port || 8000,
+              srcInputPort: 1,
+              userName: data.userName,
+              password: data.password,
+              streamType: 'auto',
+              addressingFormatType: 'ipaddress',
+              proxyProtocol: data.protocol
+            }
+          }
+        }),
+        {
+          headers: this.headers
+        });
+      _result = response.data;
+    } catch (e) {
+      _result = e.response.data;
+    }
+    const result = await XmlHandler.parser<RemoteAddChannelResult>(_result);
+    if (result.ResponseStatus.statusCode !== 1) {
+      throw new Error('fail to edit channel');
+    }
   }
 
   public async deleteChannel(channelId: number): Promise<void>;
@@ -382,5 +427,10 @@ export class Nvr extends Base {
 
   public getChannelConnect(): ChannelConnection {
     return new ChannelConnection(this);
+  }
+
+  public async getCameraStatus(ip: string, sourceChannel: number): Promise<ChannelStatus | null> {
+    const channels = await this.getChannelStatus();
+    return channels.find(c => c.ip === ip && c.sourceChannel === sourceChannel) || null;
   }
 }
